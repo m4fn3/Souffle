@@ -36,9 +36,10 @@ ytdl = youtube_dl.YoutubeDL(ytdl_options)
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    """youtube-dl操作"""
+    """YouTubeデータ取得"""
 
     def __init__(self, source, *, data):
+        """初期化処理"""
         super().__init__(source)
         self.data = data
 
@@ -51,7 +52,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
     @classmethod
     async def create_source(cls, search: str, *, loop, process=True):
-        """動画データの取得"""
+        """動画データ取得"""
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url=search, download=False, process=process))
         return data
@@ -71,9 +72,10 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 
 class Player:
-    """再生操作全般を行うプレイヤー"""
+    """楽曲情報の保持/再生を行うプレイヤー"""
 
     def __init__(self, interaction):
+        """初期化処理"""
         self.bot = interaction.client
         self.guild = interaction.guild
         self.channel = interaction.channel
@@ -88,7 +90,7 @@ class Player:
         )
 
     async def player_loop(self):
-        """音楽再生のメインループ"""
+        """音楽再生基盤"""
         while True:
             self.next.clear()
             try:
@@ -122,48 +124,83 @@ class Player:
             elif self.loop == 1:
                 self.queue._queue.appendleft(data)
 
-    def destroy(self, guild):
-        return self.bot.loop.create_task(guild.voice_client.disconnect())
+    def destroy(self, guild: discord.Guild):
+        """パネル破棄"""
+        return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
 
 
-class Request(discord.ui.Modal, title="音楽の追加"):
+class Request(discord.ui.Modal, title="楽曲追加"):
+    """楽曲追加用モーダル"""
     text = discord.ui.TextInput(
         label='再生したい曲名またはURLを入力してください',
         style=discord.TextStyle.long,
         placeholder='例) 夜に駆ける, https://youtu.be/TA5OFS_xX0c'
     )
 
-    def __init__(self, interaction):
+    def __init__(self, interaction: discord.Interaction):
         super().__init__()
         self.cog = interaction.client.get_cog("Music")
 
     async def on_submit(self, interaction: discord.Interaction):
-        """成功した場合、音楽の再生処理"""
+        """音楽の追加処理"""
         msg = await self.cog.play(interaction, self.text.value)
         await self.cog.get_player(interaction).menu.update()
         await msg.delete(delay=3)
 
     async def on_error(self, error: Exception, interaction: discord.Interaction):
-        """失敗した場合、エラーメッセージを送信"""
-        msg = await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。\n```py{error}```"))  # on_submitで既にresponseを使用した場合エラー
+        """例外発生時"""
+        msg = await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。"))
+        await msg.delete(delay=3)
+
+
+class Remove(discord.ui.Select):
+    """曲削除用セレクトメニュー"""
+    def __init__(self, interaction: discord.Interaction, songs: list):
+        super().__init__(placeholder="削除したい曲を選択してください", min_values=1, max_values=len(songs), options=songs)
+        self.interaction = interaction
+
+    async def callback(self, interaction: discord.Interaction):
+        """選択完了後"""
+        select_msg = await self.interaction.original_message()  # 選択画面を削除(元のinteraction)
+        await select_msg.delete()
+        cog = interaction.client.get_cog("Music")
+        player = cog.get_player(interaction)
+        for i in sorted([int(i) for i in self.values], reverse=True):
+            del player.queue._queue[i]
+        await cog.get_player(interaction).menu.update()
+        msg = await interaction.channel.send(embed=response.success(f"予約された曲から{len(self.values)}曲を削除しました"))
         await msg.delete(delay=3)
 
 
 class MenuView(discord.ui.View):
-    """playerコマンドの再生メニュー用Viewクラス"""
+    """操作用ボタン"""
 
-    def __init__(self, interaction):
+    def __init__(self, interaction: discord.Interaction):
         super().__init__(timeout=None)
         self.interaction = interaction
         self.cog = interaction.client.get_cog("Music")
 
     @discord.ui.button(emoji="➕")
     async def request(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """楽曲追加"""
         await interaction.response.send_modal(Request(interaction))
+
+    @discord.ui.button(emoji="➖")
+    async def remove(self, button: discord.ui.button, interaction: discord.Interaction):
+        """楽曲の削除"""
+        player = self.cog.get_player(interaction)
+        if len(player.queue._queue) == 0:
+            msg = await interaction.channel.send(embed=response.error("現在予約されている曲はありません"))
+            return await self.update(msg)
+        songs = [discord.SelectOption(label=d["title"], value=str(i)) for i, d in enumerate(player.queue._queue)]
+        view = discord.ui.View()
+        view.add_item(Remove(interaction, songs))
+        await interaction.response.send_message(embed=response.normal("削除したい曲を選んでください"), view=view)
 
     @discord.ui.button(emoji="⏸")
     async def play(self, button: discord.ui.Button, interaction: discord.Interaction):
-        voice_client = self.interaction.guild.voice_client
+        """再生/停止 切り替え"""
+        voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
         embed: discord.Embed
         if not voice_client or not voice_client.is_connected():  # 未接続
             embed = response.error("現在再生中の音楽はありません")
@@ -184,11 +221,13 @@ class MenuView(discord.ui.View):
 
     @discord.ui.button(emoji="⏭")
     async def skip(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """曲のスキップ"""
         msg = await self.cog.skip(interaction)
         await self.update(msg)
 
     @discord.ui.button(emoji="🔄")
     async def loop(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """繰り返し再生の設定"""
         player = self.cog.get_player(interaction)
         embed: discord.Embed
         if player.loop == 0:
@@ -211,22 +250,26 @@ class MenuView(discord.ui.View):
 
     @discord.ui.button(emoji="🔀")
     async def shuffle(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """予約済曲のシャッフル"""
         msg = await self.cog.shuffle(interaction)
         await self.update(msg)
 
     @discord.ui.button(label="■", style=discord.ButtonStyle.red)
-    async def stop_(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def disconnect(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """VCからの切断"""
         await self.cog.disconnect(interaction)
 
-    async def update(self, msg):  # 各アクション実行後に画面更新&メッセージ削除
+    async def update(self, msg: discord.Message):  # 各アクション実行後に画面更新&メッセージ削除
+        """最新状態への画面更新"""
         await self.cog.get_player(self.interaction).menu.update(self)
         await msg.delete(delay=3)
 
 
 class Menu:
-    """playerコマンドの再生メニュー"""
+    """音楽操作パネル"""
 
-    def __init__(self, interaction):
+    def __init__(self, interaction: discord.Interaction):
+        """初期化処理"""
         self.interaction = interaction
         self.bot = interaction.client
         self.channel = interaction.channel
@@ -234,13 +277,15 @@ class Menu:
         self.view = None
 
     async def initialize(self):
+        """初期化処理(非同期)"""
         self.view = MenuView(self.interaction)
         self.msg = await self.channel.send("読込中...", view=self.view)
         await self.update()
 
-    async def update(self, view=None):
+    async def update(self, view: discord.ui.View = None):
+        """最新状態への画面更新"""
         player = self.bot.get_cog("Music").get_player(self.interaction)
-        voice_client = self.interaction.guild.voice_client
+        voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
         text = ""
         if voice_client.source is not None:
             text += f"\n再生中:\n [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
@@ -263,12 +308,14 @@ class Menu:
             await self.msg.edit(content=None, embed=embed, view=view)
 
     async def destroy(self):
+        """操作パネルの破棄"""
         self.view.stop()
         self.view.clear_items()
         await self.msg.delete()
 
 
-def duration_to_text(seconds):
+def duration_to_text(seconds: int) -> str:
+    """秒からの変換"""
     if seconds == 0:
         return "LIVE"
     seconds = seconds % (24 * 3600)
@@ -283,12 +330,15 @@ def duration_to_text(seconds):
 
 
 class Music(commands.Cog):
+    """コマンド定義"""
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
+        """初期化処理"""
         self.bot = bot
         self.players = {}
 
-    def get_player(self, interaction):
+    def get_player(self, interaction: discord.Interaction):
+        """プレイヤーの取得"""
         try:
             player = self.players[interaction.guild.id]
         except KeyError:
@@ -298,6 +348,7 @@ class Music(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
+        """音声系状態の変更を検出"""
         if before.channel is not None and after.channel is None:  # 退出
             bot_member = member.guild.get_member(self.bot.user.id)
             if member == bot_member:  # botの退出
@@ -321,6 +372,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
     async def player_(self, interaction: discord.Interaction):
+        """操作パネルの起動"""
         # VCに接続していることを確認
         # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
         if await self.join(interaction):
@@ -363,7 +415,7 @@ class Music(commands.Cog):
             # await interaction.response.send_message(embed=response.warning(f"既に{interaction.user.voice.channel.name}に接続しています"))
             await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に接続しています"))
 
-    async def process(self, interaction: discord.Interaction, search: str, suppress: bool):
+    async def process(self, interaction: discord.Interaction, search: str, suppress: bool) -> Union[int, discord.Message]:
         """楽曲のデータ取得処理"""
         player = self.get_player(interaction)
         async with interaction.channel.typing():
@@ -391,7 +443,7 @@ class Music(commands.Cog):
                 meta_count += 1
             return meta_count if suppress else await interaction.channel.send(embed=response.success(f"{data['title']}から{meta_count}曲を追加しました"))
 
-    async def play(self, interaction: discord.Interaction, query: str):
+    async def play(self, interaction: discord.Interaction, query: str) -> discord.Message:
         """音楽の追加"""
         # if interaction.guild.voice_client is None:
         #     if await self.join(interaction):
@@ -439,5 +491,5 @@ class Music(commands.Cog):
         return await interaction.channel.send(embed=response.success("予約された曲をシャッフルしました"))
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot):
     await bot.add_cog(Music(bot))
