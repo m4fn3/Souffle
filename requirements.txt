@@ -1,6 +1,6 @@
 asyncio
 async_timeout
-git+https://github.com/Rapptz/discord.py
+git+git://github.com/Rapptz/discord.py.git@6dd8845e4f38f22e226883234d369d43c7629f1a
 traceback2
 python-dotenv
 yt_dlp
