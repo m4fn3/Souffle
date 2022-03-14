@@ -153,16 +153,17 @@ class Request(discord.ui.Modal, title="楽曲追加"):
         await msg.delete(delay=3)
 
 
-class Remove(discord.ui.Select):
+class RemoveSelect(discord.ui.Select):
     """曲削除用セレクトメニュー"""
+
     def __init__(self, interaction: discord.Interaction, songs: list):
         super().__init__(placeholder="削除したい曲を選択してください", min_values=1, max_values=len(songs), options=songs)
         self.interaction = interaction
 
     async def callback(self, interaction: discord.Interaction):
         """選択完了後"""
-        select_msg = await self.interaction.original_message()  # 選択画面を削除(元のinteraction)
-        await select_msg.delete()
+        await self.interaction.delete_original_message()  # 選択画面を削除(元のinteraction)
+        self.view.stop()
         cog = interaction.client.get_cog("Music")
         player = cog.get_player(interaction)
         for i in sorted([int(i) for i in self.values], reverse=True):
@@ -170,6 +171,18 @@ class Remove(discord.ui.Select):
         await cog.get_player(interaction).menu.update()
         msg = await interaction.channel.send(embed=response.success(f"予約された曲から{len(self.values)}曲を削除しました"))
         await msg.delete(delay=3)
+
+
+class RemoveView(discord.ui.View):
+    """曲削除用UI"""
+
+    def __init__(self, interaction: discord.Interaction, songs: list):
+        super().__init__(timeout=30)
+        self.interaction = interaction
+        self.add_item(RemoveSelect(interaction, songs))
+
+    async def on_timeout(self):
+        await self.interaction.delete_original_message()
 
 
 class MenuView(discord.ui.View):
@@ -193,8 +206,7 @@ class MenuView(discord.ui.View):
             msg = await interaction.channel.send(embed=response.error("現在予約されている曲はありません"))
             return await self.update(msg)
         songs = [discord.SelectOption(label=d["title"], value=str(i)) for i, d in enumerate(player.queue._queue)]
-        view = discord.ui.View()
-        view.add_item(Remove(interaction, songs))
+        view = RemoveView(interaction, songs)
         await interaction.response.send_message(embed=response.normal("削除したい曲を選んでください"), view=view)
 
     @discord.ui.button(emoji="⏸")
