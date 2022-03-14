@@ -1,6 +1,6 @@
 asyncio
 async_timeout
-discord.py==2.0.0a3881+g6dd8845e
+git+https://github.com/Rapptz/discord.py
 traceback2
 python-dotenv
 yt_dlp
