@@ -421,6 +421,7 @@ class Music(commands.Cog):
                     await member.guild.voice_client.disconnect()
 
     async def log(self, interaction: discord.Interaction):
+        self.bot.cmd_count += 1
         embed = discord.Embed(
             description=f"/player | {str(interaction.user)} | {interaction.channel.name} | {interaction.guild.name}",
             color=discord.Color.dark_theme())
