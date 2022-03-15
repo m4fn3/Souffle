@@ -424,7 +424,8 @@ class Music(commands.Cog):
         self.bot.cmd_count += 1
         embed = discord.Embed(
             description=f"/player | {str(interaction.user)} | {interaction.channel.name} | {interaction.guild.name}",
-            color=discord.Color.dark_theme())
+            color=discord.Color.dark_theme()
+        )
         content = {"embeds": [embed.to_dict()]}
         headers = {'Content-Type': 'application/json'}
         await self.bot.aiohttp_session.post(os.getenv("LOG_WH"), json=content, headers=headers)
@@ -432,19 +433,22 @@ class Music(commands.Cog):
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
     async def player_(self, interaction: discord.Interaction):
         """操作パネルの起動"""
-        await self.log(interaction)
-        # VCに接続していることを確認
-        # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
-        if await self.join(interaction):
-            return
-        player = self.get_player(interaction)
-        if player.menu is not None:  # 前のメニューを破棄
-            old_menu = player.menu  # destroy()してからmenuがNoneになるまでの間にplayer_loopがメッセージを編集しようとするのを防ぐ
-            player.menu = None  # 先にNone化
-            await old_menu.destroy()
-        menu = Menu(interaction)
-        await menu.initialize()  # 初期化完了後にメニュー登録
-        player.menu = menu
+        try:
+            await self.log(interaction)
+            # VCに接続していることを確認
+            # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
+            if await self.join(interaction):
+                return
+            player = self.get_player(interaction)
+            if player.menu is not None:  # 前のメニューを破棄
+                old_menu = player.menu  # destroy()してからmenuがNoneになるまでの間にplayer_loopがメッセージを編集しようとするのを防ぐ
+                player.menu = None  # 先にNone化
+                await old_menu.destroy()
+            menu = Menu(interaction)
+            await menu.initialize()  # 初期化完了後にメニュー登録
+            player.menu = menu
+        except:
+            print(traceback2.format_exc())
 
     async def join(self, interaction: discord.Interaction):
         """VCに接続"""
