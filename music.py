@@ -4,7 +4,6 @@ from discord import app_commands
 
 import asyncio
 from async_timeout import timeout
-from dotenv import load_dotenv
 import os
 import random
 import re
@@ -15,9 +14,6 @@ import yt_dlp as youtube_dl
 import response
 from emoji import Emoji
 import souffle
-
-load_dotenv(verbose=True)
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 ytdl_options = {
     'format': 'bestaudio/best',
@@ -437,22 +433,19 @@ class Music(commands.Cog):
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
     async def player_(self, interaction: discord.Interaction):
         """操作パネルの起動"""
-        try:
-            await self.log(interaction)
-            # VCに接続していることを確認
-            # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
-            if await self.join(interaction):
-                return
-            player = self.get_player(interaction)
-            if player.menu is not None:  # 前のメニューを破棄
-                old_menu = player.menu  # destroy()してからmenuがNoneになるまでの間にplayer_loopがメッセージを編集しようとするのを防ぐ
-                player.menu = None  # 先にNone化
-                await old_menu.destroy()
-            menu = Menu(interaction)
-            await menu.initialize()  # 初期化完了後にメニュー登録
-            player.menu = menu
-        except:
-            print(traceback2.format_exc())
+        await self.log(interaction)
+        # VCに接続していることを確認
+        # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
+        if await self.join(interaction):
+            return
+        player = self.get_player(interaction)
+        if player.menu is not None:  # 前のメニューを破棄
+            old_menu = player.menu  # destroy()してからmenuがNoneになるまでの間にplayer_loopがメッセージを編集しようとするのを防ぐ
+            player.menu = None  # 先にNone化
+            await old_menu.destroy()
+        menu = Menu(interaction)
+        await menu.initialize()  # 初期化完了後にメニュー登録
+        player.menu = menu
 
     async def join(self, interaction: discord.Interaction):
         """VCに接続"""
