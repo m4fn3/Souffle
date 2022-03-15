@@ -12,6 +12,7 @@ import yt_dlp as youtube_dl
 
 import response
 from emoji import Emoji
+import souffle
 
 ytdl_options = {
     'format': 'bestaudio/best',
@@ -380,7 +381,7 @@ def duration_to_text(seconds: int) -> str:
 class Music(commands.Cog):
     """コマンド定義"""
 
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: souffle.Souffle):
         """初期化処理"""
         self.bot = bot
         self.players = {}
@@ -436,14 +437,13 @@ class Music(commands.Cog):
 
     async def join(self, interaction: discord.Interaction):
         """VCに接続"""
-        # if interaction.guild.id not in self.bot.cache_guilds:
-        #     embed = discord.Embed(
-        #         description=f"負荷対策のため音楽機能はサーバーごとの承認制になっています。\n__**ミルクチョコプレイヤーの方**__は基本誰でも許可しますので、\n1. __上の番号__(コピペでok)\n"
-        #                     f"2. __ミルクチョコをしていることがわかるもの(ゲームのスクショやツイッターなど)__\nとともに[公式サーバー](https://discord.gg/h2ZNX9mSSN)の<#887981017539944498>でお伝えください！",
-        #         color=discord.Color.blue()
-        #     )
-        #     return await interaction.channel.send(f"{interaction.guild.id}\nhttps://discord.gg/h2ZNX9mSSN", embed=embed)
-
+        if interaction.guild.id not in self.bot.verified_guilds:
+            embed = discord.Embed(
+                description=f"負荷対策のため音楽機能はサーバーごとの承認制になっています。\n上に書いてある番号とミルクチョコ内のロビー画面のスクショ\nを[公式サーバー](https://discord.gg/h2ZNX9mSSN)の<#887981017539944498>に送ってください。",
+                color=discord.Color.blue()
+            )
+            await interaction.response.send_message(f"{interaction.guild.id}\nhttps://discord.gg/h2ZNX9mSSN", embed=embed)
+            return True
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
         if interaction.user.voice is None:
             await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"))
@@ -529,9 +529,6 @@ class Music(commands.Cog):
         return await interaction.channel.send(embed=response.success("音楽をスキップしました"))
 
     async def shuffle(self, interaction: discord.Interaction):
-        voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
-        # if not voice_client or not voice_client.is_connected():
-        #     return await interaction.channel.send(embed=response.error("BOTはまだボイスチャンネルに接続していません"))
         player = self.get_player(interaction)
         if player.queue.empty():
             return await interaction.channel.send(embed=response.error("現在予約された曲はありません"))
@@ -539,5 +536,5 @@ class Music(commands.Cog):
         return await interaction.channel.send(embed=response.success("予約された曲をシャッフルしました"))
 
 
-async def setup(bot: commands.Bot):
+async def setup(bot: souffle.Souffle):
     await bot.add_cog(Music(bot))
