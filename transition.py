@@ -4,7 +4,7 @@ import logging
 import os
 from dotenv import load_dotenv
 
-import discord
+import nextcord as discord
 from emoji import Emoji
 import response
 
