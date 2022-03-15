@@ -4,6 +4,7 @@ from discord import app_commands
 
 import asyncio
 from async_timeout import timeout
+import os
 import random
 import re
 import traceback2
@@ -419,9 +420,18 @@ class Music(commands.Cog):
                     #     await player.channel.send("")
                     await member.guild.voice_client.disconnect()
 
+    async def log(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            description=f"/player | {str(interaction.user)} | {interaction.channel.name} | {interaction.guild.name}",
+            color=discord.Color.dark_theme())
+        content = {"embeds": [embed.to_dict()]}
+        headers = {'Content-Type': 'application/json'}
+        await self.bot.aiohttp_session.post(os.getenv("LOG_WH"), json=content, headers=headers)
+
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
     async def player_(self, interaction: discord.Interaction):
         """操作パネルの起動"""
+        await self.log(interaction)
         # VCに接続していることを確認
         # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
         if await self.join(interaction):
