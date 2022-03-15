@@ -11,4 +11,6 @@ class Souffle(commands.Bot):
         print(f"Logged in to [{self.user}]")
         await self.load_extension("music")
         await self.tree.sync()
-        # print([f"<:{e.name}:{e.id}>" for e in self.get_guild(953185304267862066).emojis])
+        # for e in self.get_guild(953185304267862066).emojis:
+        #     print(f"{e.name} = \"<:{e.name}:{e.id}>\"")
+
