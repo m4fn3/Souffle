@@ -6,6 +6,8 @@ import os
 import pickle
 import psutil
 import time
+import traceback2
+from typing import Literal
 
 import souffle
 import response
@@ -105,6 +107,22 @@ class Developer(commands.Cog):
             embed.add_field(name="Discord", value=f"```yaml\nServers: {guilds}\nTextChannels: {text_channels}\nVoiceChannels: {voice_channels}\nUsers: {users}\nConnectedVC: {vcs}```", inline=False)
             embed.add_field(name="Run", value=f"```yaml\nCommandRuns: {self.bot.cmd_count}\nUptime: {uptime}\nLatency: {latency:.2f}[s]\n```")
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    @app_commands.command(description="[管理者用] プログラムを再読み込みします")
+    @app_commands.guilds(dev_guild)
+    async def reload(self, interaction: discord.Interaction, cog: Literal["music", "developer"]):
+        if interaction.user.id in admin:
+            try:
+                if cog == "music":
+                    players = self.bot.get_cog("Music").players
+                    await self.bot.reload_extension("music")
+                    self.bot.get_cog("Music").players = players
+                else:
+                    await self.bot.reload_extension(cog)
+            except:
+                await interaction.response.send_message(f"{cog}の再読み込みに失敗しました\n{traceback2.format_exc()}.", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"{cog}の再読み込みに成功しました", ephemeral=True)
 
 
 async def setup(bot: souffle.Souffle):
