@@ -3,7 +3,7 @@ import discord
 
 def error(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:xx:773568207222210650> {text}",
+        description=f"<:xx:953186398075252747> {text}",
         color=discord.Color.red()
     )
     if title:
@@ -13,7 +13,7 @@ def error(text: str, title: str = None):
 
 def success(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:oo:773568207231123476> {text}",
+        description=f"<:oo:953186398461108234> {text}",
         color=discord.Color.green()
     )
     if title:
@@ -23,7 +23,7 @@ def success(text: str, title: str = None):
 
 def warning(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:warn:773569061442289674> {text}",
+        description=f"<:warn:953186235034251274> {text}",
         color=0xf7b51c
     )
     if title:
