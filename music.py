@@ -193,50 +193,6 @@ class MenuView(discord.ui.View):
         self.interaction = interaction
         self.cog = interaction.client.get_cog("Music")
 
-    @discord.ui.button(emoji="➕")
-    async def request(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """楽曲追加"""
-        await interaction.response.send_modal(Request(interaction))
-
-    @discord.ui.button(emoji="➖")
-    async def remove(self, button: discord.ui.button, interaction: discord.Interaction):
-        """楽曲の削除"""
-        player = self.cog.get_player(interaction)
-        if len(player.queue._queue) == 0:
-            msg = await interaction.channel.send(embed=response.error("現在予約されている曲はありません"))
-            return await self.update(msg)
-        songs = [discord.SelectOption(label=d["title"], value=str(i)) for i, d in enumerate(player.queue._queue)]
-        view = RemoveView(interaction, songs)
-        await interaction.response.send_message(embed=response.normal("削除したい曲を選んでください"), view=view)
-
-    @discord.ui.button(emoji="⏸")
-    async def play(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """再生/停止 切り替え"""
-        voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
-        embed: discord.Embed
-        if not voice_client or not voice_client.is_connected():  # 未接続
-            embed = response.error("現在再生中の音楽はありません")
-        elif voice_client.is_playing():
-            button.emoji = "▶"
-            button.style = discord.ButtonStyle.green
-            voice_client.pause()
-            embed = response.success("音楽の再生を一時停止しました")
-        elif voice_client.is_paused():
-            button.emoji = "⏸"
-            button.style = discord.ButtonStyle.grey
-            voice_client.resume()
-            embed = response.success("音楽の再生を再開しました")
-        else:
-            embed = response.error("現在再生中の音楽はありません")
-        msg = await self.interaction.channel.send(embed=embed)
-        await self.update(msg)
-
-    @discord.ui.button(emoji="⏭")
-    async def skip(self, button: discord.ui.Button, interaction: discord.Interaction):
-        """曲のスキップ"""
-        msg = await self.cog.skip(interaction)
-        await self.update(msg)
-
     @discord.ui.button(emoji="🔄")
     async def loop(self, button: discord.ui.Button, interaction: discord.Interaction):
         """繰り返し再生の設定"""
@@ -245,7 +201,7 @@ class MenuView(discord.ui.View):
         if player.loop == 0:
             player.loop += 1
             button.emoji = "🔂"
-            button.style = discord.ButtonStyle.green
+            button.style = discord.ButtonStyle.blurple
             embed = response.success("現在再生中の曲の繰り返しを有効にしました")
         elif player.loop == 1:
             player.loop += 1
@@ -266,6 +222,81 @@ class MenuView(discord.ui.View):
         msg = await self.cog.shuffle(interaction)
         await self.update(msg)
 
+    @discord.ui.button(emoji="⏸", style=discord.ButtonStyle.blurple)
+    async def play(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """再生/停止 切り替え"""
+        voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
+        embed: discord.Embed
+        if not voice_client or not voice_client.is_connected():  # 未接続
+            embed = response.error("現在再生中の音楽はありません")
+        elif voice_client.is_playing():
+            button.emoji = "▶"
+            button.style = discord.ButtonStyle.green
+            voice_client.pause()
+            embed = response.success("音楽の再生を一時停止しました")
+        elif voice_client.is_paused():
+            button.emoji = "⏸"
+            button.style = discord.ButtonStyle.blurple
+            voice_client.resume()
+            embed = response.success("音楽の再生を再開しました")
+        else:
+            embed = response.error("現在再生中の音楽はありません")
+        msg = await self.interaction.channel.send(embed=embed)
+        await self.update(msg)
+
+    @discord.ui.button(emoji="⏭")
+    async def skip(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """曲のスキップ"""
+        msg = await self.cog.skip(interaction)
+        await self.update(msg)
+
+    @discord.ui.button(emoji="🔀")
+    async def shuffle(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """予約済曲のシャッフル"""
+        msg = await self.cog.shuffle(interaction)
+        await self.update(msg)
+
+    @discord.ui.button(emoji="🗑")
+    async def clear(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """予約済み曲のクリア"""
+        player = self.cog.get_player(interaction)
+        player.queue._queue.clear()
+        msg = await interaction.channel.send(embed=response.success("予約された曲を全て削除しました"))
+        await self.update(msg)
+
+    @discord.ui.button(emoji="➕")
+    async def request(self, button: discord.ui.Button, interaction: discord.Interaction):
+        """楽曲追加"""
+        await interaction.response.send_modal(Request(interaction))
+
+    @discord.ui.button(label="⬅")
+    async def back(self, button: discord.ui.Button, interaction: discord.Interaction):
+        player = self.cog.get_player(interaction)
+        page = len(player.queue._queue) // 10 + 1
+        if 1 < player.menu.page:
+            page = player.menu.page - 1
+        await player.menu.update(self, page=page)
+
+    @discord.ui.button(label="➡")
+    async def next(self, button: discord.ui.Button, interaction: discord.Interaction):
+        player = self.cog.get_player(interaction)
+        page = 1
+        if player.menu.page < len(player.queue._queue) // 10 + 1:
+            page = player.menu.page + 1
+        await player.menu.update(self, page=page)
+
+    @discord.ui.button(emoji="➖")
+    async def remove(self, button: discord.ui.button, interaction: discord.Interaction):
+        """楽曲の削除"""
+        player = self.cog.get_player(interaction)
+        if len(player.queue._queue) == 0:
+            msg = await interaction.channel.send(embed=response.error("現在予約されている曲はありません"))
+            return await self.update(msg)
+        songs = [discord.SelectOption(label=d["title"], value=str(i)) for i, d in enumerate(player.queue._queue) if
+                 10 * (player.menu.page - 1) <= i < min(len(player.queue._queue), 10 * player.menu.page)]
+        view = RemoveView(interaction, songs)
+        await interaction.response.send_message(embed=response.normal(f"削除したい曲を選んでください ({player.menu.page} / {len(player.queue._queue) // 10 + 1} ページ)"), view=view)
+
     @discord.ui.button(label="■", style=discord.ButtonStyle.red)
     async def disconnect(self, button: discord.ui.Button, interaction: discord.Interaction):
         """VCからの切断"""
@@ -285,6 +316,7 @@ class Menu:
         self.interaction = interaction
         self.bot = interaction.client
         self.channel = interaction.channel
+        self.page = 1
         self.msg = None
         self.view = None
 
@@ -294,25 +326,24 @@ class Menu:
         self.msg = await self.channel.send("読込中...", view=self.view)
         await self.update()
 
-    async def update(self, view: discord.ui.View = None):
+    async def update(self, view: discord.ui.View = None, page: int = 1):
         """最新状態への画面更新"""
         player = self.bot.get_cog("Music").get_player(self.interaction)
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
+        self.page = page
         text = ""
         if voice_client.source is not None:
             text += f"\n再生中:\n [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
-            text += "-------------------------------------------------"
+            text += "──────────────"
         elif player.queue.empty():
             text += "まだ曲が追加されていません"
 
-        for i in range(min(len(player.queue._queue), 10)):  # 最大10曲
+        for i in range(10 * (page - 1), min(len(player.queue._queue), 10 * page)):  # 最大10曲
             d = player.queue._queue[i]
             text += f"\n{i + 1}. [{d['title']}]({d['webpage_url']}) | {duration_to_text(d['duration'])}"
-        if len(player.queue._queue) > 10:
-            text += "\n等..."
 
         embed = discord.Embed(description=text, color=discord.Color.blurple())
-        embed.set_footer(text=f"\n\n現在{len(player.queue._queue)}曲が予約されています")
+        embed.set_footer(text=f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)")
 
         if view is None:
             await self.msg.edit(content=None, embed=embed)
