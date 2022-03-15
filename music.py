@@ -37,6 +37,7 @@ ytdl = youtube_dl.YoutubeDL(ytdl_options)
 
 emoji = Emoji()
 
+
 class YTDLSource(discord.PCMVolumeTransformer):
     """YouTubeデータ取得"""
 
