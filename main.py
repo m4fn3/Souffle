@@ -1,3 +1,4 @@
+""" git+git://github.com/Rapptz/discord.py.git@6dd8845e4f38f22e226883234d369d43c7629f1a (v10使用) - メッセージ読み取り不可"""
 import logging
 import os
 from dotenv import load_dotenv
