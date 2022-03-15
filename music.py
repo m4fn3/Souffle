@@ -4,6 +4,7 @@ from discord import app_commands
 
 import asyncio
 from async_timeout import timeout
+from dotenv import load_dotenv
 import os
 import random
 import re
@@ -14,6 +15,9 @@ import yt_dlp as youtube_dl
 import response
 from emoji import Emoji
 import souffle
+
+load_dotenv(verbose=True)
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 ytdl_options = {
     'format': 'bestaudio/best',
