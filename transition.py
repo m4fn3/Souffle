@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 if c in cmd_music:
                     embed = discord.Embed(color=0xf7b51c)
                     embed.description = f"{emoji.warn} __音楽再生機能はスラッシュコマンドに移行されました__\n" \
-                                        f"`/player` と入力して音楽操作パネルを表示してみてください！\n" \
+                                        f"`[/player](https://discord.com/channels/{message.guild.id}/{message.channel.id})` と入力して音楽操作パネルを表示してみてください！\n" \
                                         f"※ 何も表示されない場合は下のボタンを押して権限を追加してください"
                     view = discord.ui.View()
                     view.add_item(discord.ui.Button(label="権限を追加", url="https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands"))
