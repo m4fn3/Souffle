@@ -122,12 +122,10 @@ class Developer(commands.Cog):
                     self.bot.get_cog("Music").players = players
                 else:
                     await self.bot.reload_extension(cog)
-                await self.bot.tree.sync()
-                await self.bot.tree.sync(guild=dev_guild)
             except:
-                await interaction.response.send_message(f"{cog}の再読み込みに失敗しました\n{traceback2.format_exc()}.", ephemeral=True)
+                await interaction.response.send_message(embed=response.error(f"{cog}の再読み込みに失敗しました\n{traceback2.format_exc()}."), ephemeral=True)
             else:
-                await interaction.response.send_message(f"{cog}の再読み込みに成功しました", ephemeral=True)
+                await interaction.response.send_message(embed=response.success(f"{cog}の再読み込みに成功しました"), ephemeral=True)
 
     @app_commands.command(description="[管理者用] シェルコマンドを実行します")
     @app_commands.guilds(dev_guild)
@@ -144,6 +142,7 @@ class Developer(commands.Cog):
     async def sync(self, interaction: discord.Interaction):
         await self.bot.tree.sync()
         await self.bot.tree.sync(guild=dev_guild)
+        await interaction.response.send_message(embed=response.success("同期に成功しました"), ephemeral=True)
 
     async def run_subprocess(self, cmd: str, loop=None):
         loop = loop or asyncio.get_event_loop()
