@@ -122,6 +122,8 @@ class Developer(commands.Cog):
                     self.bot.get_cog("Music").players = players
                 else:
                     await self.bot.reload_extension(cog)
+                await self.bot.tree.sync()
+                await self.bot.tree.sync(guild=dev_guild)
             except:
                 await interaction.response.send_message(f"{cog}の再読み込みに失敗しました\n{traceback2.format_exc()}.", ephemeral=True)
             else:
@@ -136,6 +138,12 @@ class Developer(commands.Cog):
                 await interaction.response.send_message("\n".join(output), ephemeral=True)
             except:
                 await interaction.response.send_message(file=discord.File(fp=io.StringIO("\n".join(output)), filename="output.txt"), ephemeral=True)
+
+    @app_commands.command(description="[管理者用] スラッシュコマンドの同期を行います")
+    @app_commands.guilds(dev_guild)
+    async def sync(self, interaction: discord.Interaction):
+        await self.bot.tree.sync()
+        await self.bot.tree.sync(guild=dev_guild)
 
     async def run_subprocess(self, cmd: str, loop=None):
         loop = loop or asyncio.get_event_loop()
