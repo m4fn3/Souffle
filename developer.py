@@ -1,10 +1,13 @@
+import asyncio
 import datetime
 import discord
 from discord.ext import commands
 from discord import app_commands
+import io
 import os
 import pickle
 import psutil
+import subprocess
 import time
 import traceback2
 from typing import Literal
@@ -123,6 +126,36 @@ class Developer(commands.Cog):
                 await interaction.response.send_message(f"{cog}の再読み込みに失敗しました\n{traceback2.format_exc()}.", ephemeral=True)
             else:
                 await interaction.response.send_message(f"{cog}の再読み込みに成功しました", ephemeral=True)
+
+    @app_commands.command(description="[管理者用] シェルコマンドを実行します")
+    @app_commands.guilds(dev_guild)
+    async def cmd(self, interaction: discord.Interaction, cmd: str):
+        if interaction.user.id in admin:
+            output = await self.run_subprocess(cmd, loop=self.bot.loop)
+            try:
+                await interaction.response.send_message("\n".join(output), ephemeral=True)
+            except:
+                await interaction.response.send_message(file=discord.File(fp=io.StringIO("\n".join(output)), filename="output.txt"), ephemeral=True)
+
+    async def run_subprocess(self, cmd: str, loop=None):
+        loop = loop or asyncio.get_event_loop()
+        try:
+            process = await asyncio.create_subprocess_shell(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except NotImplementedError:
+            with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) as process:
+                try:
+                    result = await loop.run_in_executor(None, process.communicate)
+                except Exception:
+                    def kill():
+                        process.kill()
+                        process.wait()
+
+                    await loop.run_in_executor(None, kill)
+                    raise
+        else:
+            result = await process.communicate()
+
+        return [res.decode('utf-8') for res in result]
 
 
 async def setup(bot: souffle.Souffle):
