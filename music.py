@@ -350,7 +350,8 @@ class Menu:
             text += f"\n{i + 1}. [{d['title']}]({d['webpage_url']}) | {duration_to_text(d['duration'])}"
 
         embed = discord.Embed(description=text, color=discord.Color.blurple())
-        embed.set_footer(text=f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)")
+        footer = f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)"
+        embed.set_footer(text=footer + "\n※ボタンや入力画面が表示されない場合はDiscordを最新版にアップデートしてください" if player.queue.empty() else footer)
 
         if view is None:
             await self.msg.edit(content=None, embed=embed)

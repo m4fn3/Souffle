@@ -27,4 +27,7 @@ class Souffle(commands.Bot):
         # for e in self.get_guild(953185304267862066).emojis:
         #     print(f"{e.name} = \"<:{e.name}:{e.id}>\"")
 
+    async def on_guild_join(self, guild: discord.Guild):
+        pass
+
 
