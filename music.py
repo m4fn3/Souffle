@@ -154,8 +154,7 @@ class Request(discord.ui.Modal, title="楽曲追加"):
 
     async def on_error(self, error: Exception, interaction: discord.Interaction):
         """例外発生時"""
-        msg = await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。"))
-        await msg.delete(delay=3)
+        msg = await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。\n```\n{traceback2.format_exc()}```"))
 
 
 class RemoveSelect(discord.ui.Select):
@@ -517,6 +516,8 @@ class Music(commands.Cog):
         elif data["extractor"] == "youtube:tab":  # プレイリスト
             meta_count = 0
             for meta in data["entries"]:
+                if meta["duration"] is None:  # 削除された動画をスキップ
+                    continue
                 meta["webpage_url"] = "https://www.youtube.com/watch?v=" + meta["id"]
                 await player.queue.put(meta)
                 meta_count += 1
