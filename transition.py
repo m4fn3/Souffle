@@ -51,8 +51,11 @@ if __name__ == '__main__':
                     view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
                     await message.reply(embed=embed, view=view)
                 elif message.guild.get_member(887274006993047562) is None:
-                    embed = response.error("This command is currently unavailable due to the effects of Discord's breaking changes. Please wait for future updates.\n")
-                    embed.set_footer(text="Discordの破壊的変更の影響でこのコマンドは現在使用できません。今後の更新をお待ちください。")
+                    embed = response.error("Due to the impact of Discord's breaking changes, this feature has been moved to sub-BOT. Please click the button below to invite.")
+                    embed.set_footer(text="Discordの破壊的変更の影響によりこの機能はサブBOTに移行されました。下のボタンから追加できます。")
+                    view = discord.ui.View()
+                    view.add_item(discord.ui.Button(label="追加/Invite", url="https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8"))
+                    view.add_item(discord.ui.Button(label="Server", url="https://discord.gg/S3kujur2pA"))
                     await message.reply(embed=embed)
 
 
