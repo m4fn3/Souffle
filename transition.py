@@ -55,7 +55,7 @@ if __name__ == '__main__':
                     embed.set_footer(text="Discordの破壊的変更の影響によりこの機能はサブBOTに移行されました。下のボタンから追加できます。")
                     view = discord.ui.View()
                     view.add_item(discord.ui.Button(label="追加/Invite", url="https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8"))
-                    view.add_item(discord.ui.Button(label="Server", url="https://discord.gg/S3kujur2pA"))
+                    view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
                     await message.reply(embed=embed, view=view)
 
 
