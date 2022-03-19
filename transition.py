@@ -25,6 +25,10 @@ if __name__ == '__main__':
 
 
     @client.event
+    async def on_ready():
+        print(f"Logged in to [{client.user}]")
+
+    @client.event
     async def on_message(message: discord.Message) -> None:
         cmd = ('notice', 'join', 'j', 'follow', 'loop_queue', 'lq', 'loopqueue', 'resume', 're', 'rs', 'res', 'accept', 'ac', 'ads', 'refuse', 'rf', 'reload', 'rl', 'menu', 'm', 'queue', 'q',
                'restart', 'skip', 's', 'quit', 'pause', 'ps', 'stop', 'clear', 'cl', 'load', 'random', 'exe', 'now_playing', 'np', 'my', 'mylist', 'play', 'p', 'player', 'pl', 'db', 'language',
