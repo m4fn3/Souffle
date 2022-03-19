@@ -56,7 +56,7 @@ if __name__ == '__main__':
                     view = discord.ui.View()
                     view.add_item(discord.ui.Button(label="追加/Invite", url="https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8"))
                     view.add_item(discord.ui.Button(label="Server", url="https://discord.gg/S3kujur2pA"))
-                    await message.reply(embed=embed)
+                    await message.reply(embed=embed, view=view)
 
 
     client.run(TOKEN)
