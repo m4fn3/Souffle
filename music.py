@@ -1,3 +1,5 @@
+import pickle
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -413,6 +415,22 @@ class Music(commands.Cog):
         view.add_item(discord.ui.Button(label="権限を追加", url="https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands"))
         view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
         await channel.send(embed=embed, view=view)
+
+        embed = discord.Embed(title=f"{guild.name} に参加しました。", color=0x00ffff)
+        embed.description = f"サーバーID: {guild.id}\nメンバー数: {len(guild.members)}\nサーバー管理者: {str(guild.owner)} ({guild.owner.id})"
+        await self.bot.get_channel(744466739542360064).send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        embed = discord.Embed(title=f"{guild.name} を退出しました。", color=0xff1493)
+        embed.description = f"サーバーID: {guild.id}\nメンバー数: {len(guild.members)}\nサーバー管理者: {str(guild.owner)} ({guild.owner.id})"
+        await self.bot.get_channel(744466739542360064).send(embed=embed)
+        if guild.id in self.bot.verified_guilds:
+            self.bot.verified_guilds.discard(guild.id)
+            channel = self.bot.get_channel(888017049589260298)
+            await channel.send(embed=response.success(f"{guild.name}({guild.id})を退出したので自動的に承認を取り下げました."))
+            with open('guilds.pickle', 'wb') as f:
+                pickle.dump(self.bot.verified_guilds, f)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
