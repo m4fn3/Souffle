@@ -20,6 +20,7 @@ emoji = Emoji()
 
 if __name__ == '__main__':
     intents = discord.Intents.default()
+    intents.members = True
     client = discord.Client(intents=intents)
 
 
@@ -44,7 +45,7 @@ if __name__ == '__main__':
                     view.add_item(discord.ui.Button(label="権限を追加", url="https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands"))
                     view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
                     await message.reply(embed=embed, view=view)
-                else:
+                elif message.guild.get_member(887274006993047562) is None:
                     embed = response.error("This command is currently unavailable due to the effects of Discord's breaking changes. Please wait for future updates.\n")
                     embed.set_footer(text="Discordの破壊的変更の影響でこのコマンドは現在使用できません。今後の更新をお待ちください。")
                     await message.reply(embed=embed)
