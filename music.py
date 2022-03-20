@@ -18,6 +18,7 @@ from emoji import Emoji
 import souffle
 
 ytdl_options = {
+    'add-header': 'Accept-Language:ja-JP',
     'format': 'bestaudio/best',
     'outtmpl': 'downloads/%(extractor)s-%(id)s-%(title)s.%(ext)s',
     'restrictfilenames': True,

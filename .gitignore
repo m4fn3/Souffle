@@ -1,4 +1,5 @@
 .env
 guilds.pickle
+cookies.txt
 .idea
 __pycache__
