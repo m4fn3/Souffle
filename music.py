@@ -411,13 +411,18 @@ class Music(commands.Cog):
                             "※ 何も表示されない場合は下のボタンを押して権限を追加してください\n" \
                             "──────────────\n" \
                             f"[/player](https://discord.com/channels/{guild.id}/{channel.id}) ... 音楽操作パネルを表示"
-        embed.set_footer(text="一部コマンドはDiscordの破壊的変更の影響で現在使用できません。今後の更新をお待ちください。")
+        embed.set_footer(text="音楽再生以外の装飾等の機能はDiscordの破壊的変更の影響によりMilkCaféに移行されました。必要な場合は下のボタンから別途追加してください。\n"
+                              "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafé. Please click the button below to invite.")
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
             label="権限を追加",
             url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands&guild_id={guild.id}")
         )
-        view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
+        view.add_item(discord.ui.Button(
+            label="MilkCaféを追加",
+            url=f"https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8&guild_id={guild.id}")
+        )
+        view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
         await channel.send(embed=embed, view=view)
 
         embed = discord.Embed(title=f"{guild.name} に参加しました。", color=0x00ffff)

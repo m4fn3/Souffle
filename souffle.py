@@ -11,10 +11,11 @@ dev_guild = discord.Object(id=565434676877983772)
 
 class Souffle(commands.Bot):
     def __init__(self, prefix: str, status: discord.Status, intents: discord.Intents) -> None:
-        super().__init__(prefix, status=status, intents=intents, help_command=None)
+        super().__init__(prefix, status=status, intents=intents)
         self.uptime = time.time()
         self.cmd_count = 0
         self.aiohttp_session = None
+        self.remove_command("help")
         with open('guilds.pickle', 'rb') as f:
             self.verified_guilds = pickle.load(f)
 
