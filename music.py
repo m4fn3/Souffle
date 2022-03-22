@@ -465,10 +465,10 @@ class Music(commands.Cog):
                     #     await player.channel.send("")
                     await member.guild.voice_client.disconnect()
 
-    async def log(self, interaction: discord.Interaction):
+    async def log(self, interaction: discord.Interaction, name: str):
         self.bot.cmd_count += 1
         embed = discord.Embed(
-            description=f"/player | {str(interaction.user)} | {interaction.channel.name} | {interaction.guild.name}",
+            description=f"/{name} | {str(interaction.user)} | {interaction.channel.name} | {interaction.guild.name}({interaction.guild.id})",
             color=discord.Color.dark_theme()
         )
         content = {"embeds": [embed.to_dict()]}
@@ -478,7 +478,7 @@ class Music(commands.Cog):
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
     async def player_(self, interaction: discord.Interaction):
         """操作パネルの起動"""
-        await self.log(interaction)
+        await self.log(interaction, "player")
         # VCに接続していることを確認
         # if interaction.guild.voice_client is None: # interaction消費のため既に接続している旨のメッセージを送信
         if await self.join(interaction):
@@ -491,6 +491,23 @@ class Music(commands.Cog):
         menu = Menu(interaction)
         await menu.initialize()  # 初期化完了後にメニュー登録
         player.menu = menu
+
+    @app_commands.command(name="invite", description="各種招待リンクを表示します")
+    async def invite(self, interaction: discord.Interaction):
+        embed = discord.Embed(color=discord.Color.blue())
+        embed.description = "音楽以外の諸機能は仕様変更の影響によりMilkCafeに移行されました。\n" \
+                            "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafe"
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(
+            label="MilkCoffee",
+            url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands")
+        )
+        view.add_item(discord.ui.Button(
+            label="MilkCafe",
+            url=f"https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8")
+        )
+        view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
+        await interaction.response.send_message("https://discord.gg/RbzSSrw", embed=embed, view=view)
 
     async def join(self, interaction: discord.Interaction):
         """VCに接続"""
