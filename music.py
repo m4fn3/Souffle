@@ -142,7 +142,7 @@ class Request(discord.ui.Modal, title="楽曲追加"):
     text = discord.ui.TextInput(
         label='再生したい曲名またはURLを入力してください',
         style=discord.TextStyle.long,
-        placeholder='例) 夜に駆ける, https://youtu.be/TA5OFS_xX0c'
+        placeholder='例) 夜に駆ける\nhttps://youtu.be/TA5OFS_xX0c\n※ 改行することで複数曲同時に追加できます'
     )
 
     def __init__(self, interaction: discord.Interaction):
