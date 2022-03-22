@@ -494,7 +494,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="invite", description="各種招待リンクを表示します")
     async def invite(self, interaction: discord.Interaction):
-        embed = discord.Embed(color=discord.Color.blue())
+        embed = discord.Embed(title="MilkCoffee", color=discord.Color.blue())
         embed.description = "音楽以外の諸機能は仕様変更の影響によりMilkCafeに移行されました。\n" \
                             "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafe"
         view = discord.ui.View()
@@ -507,7 +507,7 @@ class Music(commands.Cog):
             url=f"https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8")
         )
         view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
-        await interaction.response.send_message("https://discord.gg/RbzSSrw", embed=embed, view=view)
+        await interaction.response.send_message(embed=embed, view=view)
 
     async def join(self, interaction: discord.Interaction):
         """VCに接続"""
