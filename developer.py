@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import redirect_stdout
 import datetime
 import discord
 from discord.ext import commands
@@ -9,6 +10,7 @@ import pickle
 import psutil
 import subprocess
 import time
+import textwrap
 import traceback2
 from typing import Literal
 
@@ -140,9 +142,54 @@ class Developer(commands.Cog):
     @app_commands.command(description="[管理者用] スラッシュコマンドの同期を行います")
     @app_commands.guilds(dev_guild)
     async def sync(self, interaction: discord.Interaction):
-        await self.bot.tree.sync()
-        await self.bot.tree.sync(guild=dev_guild)
-        await interaction.response.send_message(embed=response.success("同期に成功しました"), ephemeral=True)
+        if interaction.user.id in admin:
+            await self.bot.tree.sync()
+            await self.bot.tree.sync(guild=dev_guild)
+            await interaction.response.send_message(embed=response.success("同期に成功しました"), ephemeral=True)
+
+    @app_commands.command(description="[管理者用] 任意のプログラムを実行します")
+    @app_commands.guilds(dev_guild)
+    async def exe(self, interaction: discord.Interaction, code: str):
+        env = {
+            'bot': self.bot,
+            'interaction': interaction,
+            'channel': interaction.channel,
+            'guild': interaction.guild,
+            'message': interaction.message
+        }
+        env.update(globals())
+
+        if code.startswith('```') and code.endswith('```'):
+            code = '\n'.join(code.split('\n')[1:-1])
+        code = code.strip("` \n")
+        stdout = io.StringIO()
+        to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
+        result: str
+        try:
+            exec(to_compile, env)
+            func = env['func']
+            try:
+                with redirect_stdout(stdout):
+                    ret = await func()
+            except Exception as e:
+                value = stdout.getvalue()
+                result = f'{value}{traceback2.format_exc()}'
+            else:
+                value = stdout.getvalue()
+                try:
+                    await interaction.message.add_reaction('\u2705')
+                except:
+                    pass
+
+                if ret is None:
+                    if value:
+                        result = f"{value}"
+                else:
+                    result = f"{value}{ret}"
+        except Exception as e:
+            result = f"{e.__class__.__name__}: {e}"
+        await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
+
 
     async def run_subprocess(self, cmd: str, loop=None):
         loop = loop or asyncio.get_event_loop()
