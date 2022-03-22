@@ -413,7 +413,10 @@ class Music(commands.Cog):
                             f"[/player](https://discord.com/channels/{guild.id}/{channel.id}) ... 音楽操作パネルを表示"
         embed.set_footer(text="一部コマンドはDiscordの破壊的変更の影響で現在使用できません。今後の更新をお待ちください。")
         view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="権限を追加", url="https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands"))
+        view.add_item(discord.ui.Button(
+            label="権限を追加",
+            url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commandsguild_id={guild.id}")
+        )
         view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
         await channel.send(embed=embed, view=view)
 
