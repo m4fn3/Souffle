@@ -50,7 +50,7 @@ if __name__ == '__main__':
                     view = discord.ui.View()
                     view.add_item(discord.ui.Button(
                         label="権限を追加",
-                        url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commandsguild_id={message.guild.id}")
+                        url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands&guild_id={message.guild.id}")
                     )
                     view.add_item(discord.ui.Button(label="公式サーバー", url="https://discord.gg/S3kujur2pA"))
                     await message.reply(embed=embed, view=view)
