@@ -37,7 +37,7 @@ if __name__ == '__main__':
                'list', 'back', 'weapon', 'character', 'head', 'body', 'base', 'show', 'loop', 'l', 'disconnect', 'dc', 'dis', 'leave', 'lv', 'delete', 'del', 'set')
         cmd_music = ['player', 'pl', 'play', 'p', 'join', 'j', 'disconnect', 'dc', 'dis', 'leave', 'lv', 'queue', 'q', 'pause', 'ps', 'stop', 'resume', 're', 'rs', 'res', 'skip', 's', 'now_playing',
                      'np', 'remove', 'rm', 'clear', 'cl', 'shuffle', 'loop', 'l', 'loop_queue', 'lq', 'loopqueue']
-        if message.content.startswith(("m!", ".")):
+        if message.content.startswith(("m! ", "m！ ", "ｍ! ", "ｍ！ ", "m!　", "m！　", "ｍ!　", "ｍ！　", "m!", "m！", "ｍ!", "ｍ！", "M! ", "M！ ", "Ｍ! ", "Ｍ！ ", "M!　", "M！　", "Ｍ!　", "Ｍ！　", "M!", "M！", "Ｍ!", "Ｍ！", ".")):
             if message.content.lstrip(".").lstrip("m!").startswith(cmd):
                 # スラコマ移行のお知らせ
                 c = message.content.lstrip(".").lstrip("m!").split()[0]
