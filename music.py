@@ -503,22 +503,22 @@ class Music(commands.Cog):
             return True
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
         if interaction.user.voice is None:
-            await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"))
+            await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"), ephemeral=True)
             return True
         elif voice_client is None or not voice_client.is_connected():
             if voice_client is not None:  # VoiceClientがあるがis_connectedがfalseの場合 -> 一度強制切断
                 await voice_client.disconnect(force=True)
             voice_channel = interaction.user.voice.channel
             await voice_channel.connect()
-            await interaction.response.send_message(embed=response.success(f"{voice_channel.name}に接続しました"))
+            await interaction.response.send_message(embed=response.success(f"{voice_channel.name}に接続しました"), ephemeral=True)
             if voice_channel.type == discord.ChannelType.stage_voice and voice_channel.permissions_for(interaction.guild.me).manage_channels:
                 await interaction.guild.me.edit(suppress=False)
         elif voice_client.channel.id != interaction.user.voice.channel.id:
             await voice_client.move_to(interaction.user.voice.channel)
-            await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に移動しました"))
+            await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に移動しました"), ephemeral=True)
         else:
             # await interaction.response.send_message(embed=response.warning(f"既に{interaction.user.voice.channel.name}に接続しています"))
-            await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に接続しています"))
+            await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に接続しています"), ephemeral=True)
 
     async def process(self, interaction: discord.Interaction, search: str, suppress: bool) -> Union[int, discord.Message]:
         """楽曲のデータ取得処理"""
@@ -572,13 +572,16 @@ class Music(commands.Cog):
 
     async def disconnect(self, interaction: discord.Interaction):
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
+        msg: discord.Message
         if not voice_client:  # 単体以外では起こらないはずだが、強制切断の判断に必要なので残す
-            return await interaction.channel.send(embed=response.error("BOTはまだボイスチャンネルに接続していません"))
+            msg = await interaction.channel.send(embed=response.error("BOTはまだボイスチャンネルに接続していません"))
         elif not voice_client.is_connected():  # VoiceClientがあるがis_connectedがfalseの場合 -> 一度強制切断
             await voice_client.disconnect(force=True)
-            return await interaction.channel.send(embed=response.error("異常な状況が検出されたので強制的に切断しました"))
-        await voice_client.disconnect()
-        await interaction.channel.send(embed=response.success("切断しました"))
+            msg = await interaction.channel.send(embed=response.error("異常な状況が検出されたので強制的に切断しました"))
+        else:
+            await voice_client.disconnect()
+            msg = await interaction.channel.send(embed=response.success("切断しました"))
+        await msg.delete(delay=3)
 
     async def skip(self, interaction: discord.Interaction):
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
