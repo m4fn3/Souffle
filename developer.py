@@ -21,6 +21,55 @@ dev_guild = discord.Object(id=565434676877983772)
 admin = [513136168112750593, 519760564755365888, 561359054165901347, 585351496523186187, 822814328238506014]
 
 
+class ExeInput(discord.ui.Modal, title="コード実行"):
+    code = discord.ui.TextInput(label='プログラムを入力', style=discord.TextStyle.long)
+
+    def __init__(self, bot: souffle.Souffle):
+        super().__init__()
+        self.bot = bot
+
+    async def on_submit(self, interaction: discord.Interaction):
+
+        env = {
+            'bot': self.bot,
+            'interaction': interaction,
+            'channel': interaction.channel,
+            'guild': interaction.guild,
+            'message': interaction.message
+        }
+        env.update(globals())
+        code = self.code.value
+        if code.startswith('```') and code.endswith('```'):
+            code = '\n'.join(code.split('\n')[1:-1])
+        code = code.strip("` \n")
+        stdout = io.StringIO()
+        to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
+        result: str
+        try:
+            exec(to_compile, env)
+            func = env['func']
+            try:
+                with redirect_stdout(stdout):
+                    ret = await func()
+            except Exception as e:
+                value = stdout.getvalue()
+                result = f'{value}{traceback2.format_exc()}'
+            else:
+                value = stdout.getvalue()
+                try:
+                    await interaction.message.add_reaction('\u2705')
+                except:
+                    pass
+
+                if ret is None:
+                    result = f"{value}" if value else ""
+                else:
+                    result = f"{value}{ret}"
+        except Exception as e:
+            result = f"{e.__class__.__name__}: {e}"
+        await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
+
+
 class Developer(commands.Cog):
     """開発者用コマンド"""
 
@@ -149,48 +198,9 @@ class Developer(commands.Cog):
 
     @app_commands.command(description="[管理者用] 任意のプログラムを実行します")
     @app_commands.guilds(dev_guild)
-    async def exe(self, interaction: discord.Interaction, code: str):
+    async def exe(self, interaction: discord.Interaction):
         if interaction.user.id in admin:
-            env = {
-                'bot': self.bot,
-                'interaction': interaction,
-                'channel': interaction.channel,
-                'guild': interaction.guild,
-                'message': interaction.message
-            }
-            env.update(globals())
-
-            if code.startswith('```') and code.endswith('```'):
-                code = '\n'.join(code.split('\n')[1:-1])
-            code = code.strip("` \n")
-            stdout = io.StringIO()
-            to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
-            result: str
-            try:
-                exec(to_compile, env)
-                func = env['func']
-                try:
-                    with redirect_stdout(stdout):
-                        ret = await func()
-                except Exception as e:
-                    value = stdout.getvalue()
-                    result = f'{value}{traceback2.format_exc()}'
-                else:
-                    value = stdout.getvalue()
-                    try:
-                        await interaction.message.add_reaction('\u2705')
-                    except:
-                        pass
-
-                    if ret is None:
-                        if value:
-                            result = f"{value}"
-                    else:
-                        result = f"{value}{ret}"
-            except Exception as e:
-                result = f"{e.__class__.__name__}: {e}"
-            await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
-
+            await interaction.response.send_modal(ExeInput(self.bot))
 
     async def run_subprocess(self, cmd: str, loop=None):
         loop = loop or asyncio.get_event_loop()
