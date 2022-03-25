@@ -150,45 +150,46 @@ class Developer(commands.Cog):
     @app_commands.command(description="[管理者用] 任意のプログラムを実行します")
     @app_commands.guilds(dev_guild)
     async def exe(self, interaction: discord.Interaction, code: str):
-        env = {
-            'bot': self.bot,
-            'interaction': interaction,
-            'channel': interaction.channel,
-            'guild': interaction.guild,
-            'message': interaction.message
-        }
-        env.update(globals())
+        if interaction.user.id in admin:
+            env = {
+                'bot': self.bot,
+                'interaction': interaction,
+                'channel': interaction.channel,
+                'guild': interaction.guild,
+                'message': interaction.message
+            }
+            env.update(globals())
 
-        if code.startswith('```') and code.endswith('```'):
-            code = '\n'.join(code.split('\n')[1:-1])
-        code = code.strip("` \n")
-        stdout = io.StringIO()
-        to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
-        result: str
-        try:
-            exec(to_compile, env)
-            func = env['func']
+            if code.startswith('```') and code.endswith('```'):
+                code = '\n'.join(code.split('\n')[1:-1])
+            code = code.strip("` \n")
+            stdout = io.StringIO()
+            to_compile = f'async def func():\n{textwrap.indent(code, "  ")}'
+            result: str
             try:
-                with redirect_stdout(stdout):
-                    ret = await func()
-            except Exception as e:
-                value = stdout.getvalue()
-                result = f'{value}{traceback2.format_exc()}'
-            else:
-                value = stdout.getvalue()
+                exec(to_compile, env)
+                func = env['func']
                 try:
-                    await interaction.message.add_reaction('\u2705')
-                except:
-                    pass
-
-                if ret is None:
-                    if value:
-                        result = f"{value}"
+                    with redirect_stdout(stdout):
+                        ret = await func()
+                except Exception as e:
+                    value = stdout.getvalue()
+                    result = f'{value}{traceback2.format_exc()}'
                 else:
-                    result = f"{value}{ret}"
-        except Exception as e:
-            result = f"{e.__class__.__name__}: {e}"
-        await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
+                    value = stdout.getvalue()
+                    try:
+                        await interaction.message.add_reaction('\u2705')
+                    except:
+                        pass
+
+                    if ret is None:
+                        if value:
+                            result = f"{value}"
+                    else:
+                        result = f"{value}{ret}"
+            except Exception as e:
+                result = f"{e.__class__.__name__}: {e}"
+            await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
 
 
     async def run_subprocess(self, cmd: str, loop=None):
