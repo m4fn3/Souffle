@@ -125,7 +125,7 @@ class Player:
             if self.menu:  # 再生中の曲はソースから情報を取得するため再生処理の後に実行
                 await self.menu.update()
             await self.next.wait()
-            source.cleanup()
+            self.guild.voice_client.stop()
             self.current = None
             if self.loop == 2:
                 await self.queue.put(data)
@@ -157,7 +157,7 @@ class Request(discord.ui.Modal, title="楽曲追加"):
 
     async def on_error(self, error: Exception, interaction: discord.Interaction):
         """例外発生時"""
-        msg = await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。\n```\n{traceback2.format_exc()}```"))
+        await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。\n```\n{traceback2.format_exc()}```"))
 
 
 class RemoveSelect(discord.ui.Select):
