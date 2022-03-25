@@ -1,9 +1,11 @@
 import discord
+from emoji import Emoji
 
 
+emoji = Emoji()
 def error(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:xx:953186398075252747> {text}",
+        description=f"{emoji.xx} {text}",
         color=discord.Color.red()
     )
     if title:
@@ -13,7 +15,7 @@ def error(text: str, title: str = None):
 
 def success(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:oo:953186398461108234> {text}",
+        description=f"{emoji.oo} {text}",
         color=discord.Color.green()
     )
     if title:
@@ -23,7 +25,7 @@ def success(text: str, title: str = None):
 
 def warning(text: str, title: str = None):
     embed = discord.Embed(
-        description=f"<:warn:953186235034251274> {text}",
+        description=f"{emoji.warn} {text}",
         color=0xf7b51c
     )
     if title:
