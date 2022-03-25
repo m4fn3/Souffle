@@ -598,7 +598,7 @@ class Music(commands.Cog):
         else:
             await voice_client.disconnect()
             msg = await interaction.channel.send(embed=response.success("切断しました"))
-        await msg.delete(delay=3)
+        await msg.delete(delay=10)
 
     async def skip(self, interaction: discord.Interaction):
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = interaction.guild.voice_client
