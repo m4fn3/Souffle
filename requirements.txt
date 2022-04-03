@@ -1,7 +1,7 @@
 aiohttp
 asyncio
 async_timeout
-git+git://github.com/Rapptz/discord.py.git@6dd8845e4f38f22e226883234d369d43c7629f1a
+git+git://github.com/Rapptz/discord.py.git@58db6352294d380edd42e8a4edc617693332500a
 traceback2
 psutil
 python-dotenv

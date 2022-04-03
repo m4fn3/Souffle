@@ -201,7 +201,7 @@ class MenuView(discord.ui.View):
         self.cog = interaction.client.get_cog("Music")
 
     @discord.ui.button(emoji=emoji.repeat)
-    async def loop(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def loop(self, interaction: discord.Interaction, button: discord.ui.Button):
         """繰り返し再生の設定"""
         player = self.cog.get_player(interaction)
         embed: discord.Embed
@@ -224,13 +224,13 @@ class MenuView(discord.ui.View):
         await self.update(msg)
 
     @discord.ui.button(emoji=emoji.shuffle)
-    async def shuffle(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
         """予約済曲のシャッフル"""
         msg = await self.cog.shuffle(interaction)
         await self.update(msg)
 
     @discord.ui.button(emoji=emoji.pause, style=discord.ButtonStyle.blurple)
-    async def play(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def play(self, interaction: discord.Interaction, button: discord.ui.Button):
         """再生/停止 切り替え"""
         voice_client: Union[discord.VoiceClient, discord.VoiceProtocol] = self.interaction.guild.voice_client
         embed: discord.Embed
@@ -252,13 +252,13 @@ class MenuView(discord.ui.View):
         await self.update(msg)
 
     @discord.ui.button(emoji=emoji.skip)
-    async def skip(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         """曲のスキップ"""
         msg = await self.cog.skip(interaction)
         await self.update(msg)
 
     @discord.ui.button(emoji=emoji.question)
-    async def help(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
         """予約済み曲のクリア"""
         embed = discord.Embed(color=discord.Color.blue())
         embed.description = f"{emoji.repeat} ... 曲のループ設定です(押すごとに 1曲繰り返し/全曲繰り返し/オフ と切り替わります)\n" \
@@ -274,12 +274,12 @@ class MenuView(discord.ui.View):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @discord.ui.button(emoji=emoji.add)
-    async def request(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def request(self, interaction: discord.Interaction, button: discord.ui.Button):
         """楽曲追加"""
         await interaction.response.send_modal(Request(interaction))
 
     @discord.ui.button(emoji=emoji.back)
-    async def back(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = self.cog.get_player(interaction)
         page = len(player.queue._queue) // 10 + 1
         if 1 < player.menu.page:
@@ -287,7 +287,7 @@ class MenuView(discord.ui.View):
         await player.menu.update(self, page=page)
 
     @discord.ui.button(emoji=emoji.next)
-    async def next(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
         player = self.cog.get_player(interaction)
         page = 1
         if player.menu.page < len(player.queue._queue) // 10 + 1:
@@ -295,7 +295,7 @@ class MenuView(discord.ui.View):
         await player.menu.update(self, page=page)
 
     @discord.ui.button(emoji=emoji.remove)
-    async def remove(self, button: discord.ui.button, interaction: discord.Interaction):
+    async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
         """楽曲の削除"""
         player = self.cog.get_player(interaction)
         if len(player.queue._queue) == 0:
@@ -307,7 +307,7 @@ class MenuView(discord.ui.View):
         await interaction.response.send_message(embed=response.normal(f"削除したい曲を選んでください ({player.menu.page} / {len(player.queue._queue) // 10 + 1} ページ)"), view=view)
 
     @discord.ui.button(emoji=emoji.disconnect, style=discord.ButtonStyle.red)
-    async def disconnect(self, button: discord.ui.Button, interaction: discord.Interaction):
+    async def disconnect(self, interaction: discord.Interaction, button: discord.ui.Button):
         """VCからの切断"""
         await self.cog.disconnect(interaction)
 
