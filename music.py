@@ -30,7 +30,7 @@ ytdl_options = {
     'no_warnings': True,
     'default_search': 'auto',
     'source_address': '0.0.0.0',  # ipv6 addresses cause issues sometimes
-    'cookiefile': 'cookies.txt'
+    'cookies': 'cookies.txt'
 }
 
 ffmpeg_options = {
@@ -222,12 +222,14 @@ class MenuView(discord.ui.View):
             embed = response.success("曲の繰り返しを無効にしました")
         msg = await interaction.channel.send(embed=embed)
         await self.update(msg)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.shuffle)
     async def shuffle(self, interaction: discord.Interaction, button: discord.ui.Button):
         """予約済曲のシャッフル"""
         msg = await self.cog.shuffle(interaction)
         await self.update(msg)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.pause, style=discord.ButtonStyle.blurple)
     async def play(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -250,12 +252,14 @@ class MenuView(discord.ui.View):
             embed = response.error("現在再生中の音楽はありません")
         msg = await self.interaction.channel.send(embed=embed)
         await self.update(msg)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.skip)
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         """曲のスキップ"""
         msg = await self.cog.skip(interaction)
         await self.update(msg)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.question)
     async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -285,6 +289,7 @@ class MenuView(discord.ui.View):
         if 1 < player.menu.page:
             page = player.menu.page - 1
         await player.menu.update(self, page=page)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.next)
     async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -293,6 +298,7 @@ class MenuView(discord.ui.View):
         if player.menu.page < len(player.queue._queue) // 10 + 1:
             page = player.menu.page + 1
         await player.menu.update(self, page=page)
+        await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.remove)
     async def remove(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -300,6 +306,7 @@ class MenuView(discord.ui.View):
         player = self.cog.get_player(interaction)
         if len(player.queue._queue) == 0:
             msg = await interaction.channel.send(embed=response.error("現在予約されている曲はありません"))
+            await interaction.response.defer()
             return await self.update(msg)
         songs = [discord.SelectOption(label=d["title"], value=str(i)) for i, d in enumerate(player.queue._queue) if
                  10 * (player.menu.page - 1) <= i < min(len(player.queue._queue), 10 * player.menu.page)]
