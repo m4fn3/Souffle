@@ -102,8 +102,12 @@ class Player:
         while True:
             self.next.clear()
             try:
-                if len(self.queue._queue) == 0 and self.menu is not None:
-                    await self.menu.update()  # 予約曲が0でメニューがある場合
+                if len(self.queue._queue) == 0:
+                    if self.menu is not None:
+                        await self.menu.update()  # 予約曲が0でメニューがある場合
+                    if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
+                        if self.guild.voice_client.channel.instance is not None:
+                            await self.guild.voice_client.channel.instance.edit(topic="まだ曲が追加されていません")
                 async with timeout(300):
                     data = await self.queue.get()
             except asyncio.TimeoutError:  # 自動切断
@@ -124,6 +128,11 @@ class Player:
             )
             if self.menu:  # 再生中の曲はソースから情報を取得するため再生処理の後に実行
                 await self.menu.update()
+            if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
+                if self.guild.voice_client.channel.instance is None:
+                    await self.guild.voice_client.channel.create_instance(topic=source.title)
+                else:
+                    await self.guild.voice_client.channel.instance.edit(topic=source.title)
             await self.next.wait()
             self.guild.voice_client.stop()
             self.current = None
@@ -603,6 +612,9 @@ class Music(commands.Cog):
             await voice_client.disconnect(force=True)
             msg = await interaction.channel.send(embed=response.error("異常な状況が検出されたので強制的に切断しました"))
         else:
+            voice_channel: discord.StageChannel = interaction.guild.voice_client.channel
+            if voice_channel.type == discord.ChannelType.stage_voice and voice_channel.permissions_for(interaction.guild.me).manage_channels and voice_channel.instance is not None:
+                await voice_channel.instance.delete()
             await voice_client.disconnect()
             msg = await interaction.channel.send(embed=response.success("切断しました"))
         await msg.delete(delay=10)
