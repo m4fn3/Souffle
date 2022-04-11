@@ -361,7 +361,7 @@ class Menu:
             text += f"\n再生中:\n [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
             text += "──────────────"
         elif player.queue.empty():
-            text += f"まだ曲が追加されていません\n{emoji.add}を押して曲を追加しましょう!\n詳しくは{emoji.question}を押して確認してください"
+            text += f"まだ曲が追加されていません\n──────────────\n{emoji.add}を押して曲を追加しましょう!\n詳しくは{emoji.question}を押して確認してください"
 
         for i in range(10 * (page - 1), min(len(player.queue._queue), 10 * page)):  # 最大10曲
             d = player.queue._queue[i]
