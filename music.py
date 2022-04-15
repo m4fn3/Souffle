@@ -6,6 +6,7 @@ from discord import app_commands
 
 import asyncio
 from async_timeout import timeout
+from datetime import datetime as dt
 import os
 import random
 import re
@@ -463,22 +464,33 @@ class Music(commands.Cog):
         if before.channel is not None and after.channel is None:  # 退出
             bot_member = member.guild.get_member(self.bot.user.id)
             if member == bot_member:  # botの退出
-                try:
+                # ***** 一時的なバグ追跡用ログ *****
+                i = f"{dt.now().strftime('%Y/%m/%d %H:%M:%S')} | {member.guild.name}/{before.channel.name}"
+                i += f" - vcl: True / <@519760564755365888> p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
+                msg = await self.bot.get_channel(964431944484016148).send(i)
+                # *******************************
+
+                try:  # 一時的な再接続の場合はデータを保持する
                     self.players[member.guild.id].task.cancel()
                     if self.players[member.guild.id].menu is not None:
                         self.bot.loop.create_task(self.players[member.guild.id].menu.destroy())
                     del self.players[member.guild.id]
                 except:
                     pass
-            # MEMO: memberインテントが必要
+
+                # *******************************
+                await asyncio.sleep(5)
+                i += f" - vcl: True / p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
+                await msg.edit(content=i)
+                # *******************************
             # 自動切断
             elif bot_member in before.channel.members:  # BOT接続しているVC
                 voice_members = before.channel.members
                 real_members = discord.utils.get(voice_members, bot=False)
                 if len(voice_members) == 1 or real_members is None:
-                    # if member.guild.id in self.players:
-                    #     player = self.get_player(member)
-                    #     await player.channel.send("")
+                    if member.guild.voice_client.channel.type == discord.ChannelType.stage_voice and member.guild.voice_client.channel.permissions_for(member.guild.me).manage_channels:
+                        if member.guild.voice_client.channel.instance is not None:
+                            await member.guild.voice_client.channel.instance.delete()
                     await member.guild.voice_client.disconnect()
 
     async def log(self, interaction: discord.Interaction, name: str):
