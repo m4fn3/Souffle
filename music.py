@@ -469,14 +469,16 @@ class Music(commands.Cog):
                 i += f" - vcl: True / <@519760564755365888> p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
                 msg = await self.bot.get_channel(964431944484016148).send(i)
                 # *******************************
-
-                try:  # 一時的な再接続の場合はデータを保持する
-                    self.players[member.guild.id].task.cancel()
-                    if self.players[member.guild.id].menu is not None:
-                        self.bot.loop.create_task(self.players[member.guild.id].menu.destroy())
-                    del self.players[member.guild.id]
-                except:
-                    pass
+                if member.guild.voice_client is not None and member.guild.voice_client._potentially_reconnecting:
+                    pass  # 一時的な再接続の場合はデータを保持する
+                else:
+                    try:
+                        self.players[member.guild.id].task.cancel()
+                        if self.players[member.guild.id].menu is not None:
+                            self.bot.loop.create_task(self.players[member.guild.id].menu.destroy())
+                        del self.players[member.guild.id]
+                    except:
+                        pass
 
                 # *******************************
                 await asyncio.sleep(5)
