@@ -466,7 +466,7 @@ class Music(commands.Cog):
             if member == bot_member:  # botの退出
                 # ***** 一時的なバグ追跡用ログ *****
                 i = f"{dt.now().strftime('%Y/%m/%d %H:%M:%S')} | {member.guild.name}/{before.channel.name}"
-                i += f" - vcl: True / <@519760564755365888> p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
+                i += f" - vcl: True / p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
                 msg = await self.bot.get_channel(964431944484016148).send(i)
                 # *******************************
                 if member.guild.voice_client is not None and member.guild.voice_client._potentially_reconnecting:
