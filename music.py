@@ -469,7 +469,7 @@ class Music(commands.Cog):
                 i += f" - vcl: True / p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
                 msg = await self.bot.get_channel(964431944484016148).send(i)
                 # *******************************
-                if member.guild.voice_client is not None and member.guild.voice_client._potentially_reconnecting:
+                if member.guild.voice_client is not None and (member.guild.voice_client._potentially_reconnecting or member.guild.voice_client._handshaking):
                     pass  # 一時的な再接続の場合はデータを保持する
                 else:
                     try:
