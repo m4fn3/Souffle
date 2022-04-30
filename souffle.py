@@ -1,10 +1,8 @@
-import aiohttp
 import discord
 from discord.ext import commands
 import pickle
 import time
-
-import response
+import aiohttp
 
 dev_guild = discord.Object(id=565434676877983772)
 
@@ -27,6 +25,4 @@ class Souffle(commands.Bot):
         await self.load_extension("developer")
         await self.tree.sync()
         await self.tree.sync(guild=dev_guild)
-        # for e in self.get_guild(953185304267862066).emojis:
-        #     print(f"{e.name} = \"<:{e.name}:{e.id}>\"")
 

@@ -1,5 +1,6 @@
 import pickle
 
+import aiohttp
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -72,12 +73,29 @@ class YTDLSource(discord.PCMVolumeTransformer):
         loop = loop or asyncio.get_event_loop()
 
         data = await loop.run_in_executor(None, lambda: ytdl.extract_info(url=data["webpage_url"], download=False))
-
         return cls(
             discord.FFmpegPCMAudio(
                 data['url'], **ffmpeg_options
             ), data=data
         )
+
+
+async def get_related_video(session: aiohttp.ClientSession, video_id: str, history: list) -> Union[str, None]:
+    """関連動画をinnertubeで取得"""
+    params = {'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8', 'alt': 'json'}
+    resp = await session.post(
+        "https://youtubei.googleapis.com/youtubei/v1/next/", params=params,
+        json={'videoId': video_id, 'context': {'client': {'clientName': 'WEB', 'clientVersion': '2.20210223.09.00'}}}
+    )
+    data = await resp.json()
+    items = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"]["results"]
+    ids = [
+        item["compactVideoRenderer"]["videoId"] for item in items
+        if "compactVideoRenderer" in item and "videoId" in item["compactVideoRenderer"] and item["compactVideoRenderer"]["videoId"] not in history
+    ]
+    if len(ids) == 0:
+        return None
+    return ids[0]
 
 
 class Player:
@@ -89,61 +107,81 @@ class Player:
         self.guild = interaction.guild
         self.channel = interaction.channel
         self.volume = 1
-        self.loop = 0  # 0: off / 1: loop / 2: loop_queue
+        self.loop = 0  # 0: off / 1: loop / 2: loop_queue / 3: auto
         self.queue = asyncio.Queue()
         self.next = asyncio.Event()
         self.current = None
         self.menu = None
+        self.history = []
         self.task = interaction.client.loop.create_task(
             self.player_loop()
         )
 
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0)', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive',
+            'X-YouTube-Client-Name': '1', 'X-YouTube-Client-Version': '2.20210223.09.00', 'Referer': 'https://www.youtube.com/'
+        }
+        self.session = aiohttp.ClientSession(headers=headers)
+
     async def player_loop(self):
         """音楽再生基盤"""
-        while True:
-            self.next.clear()
-            try:
-                if len(self.queue._queue) == 0:
-                    if self.menu is not None:
-                        await self.menu.update()  # 予約曲が0でメニューがある場合
-                    if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
-                        if self.guild.voice_client.channel.instance is not None:
-                            await self.guild.voice_client.channel.instance.edit(topic="まだ曲が追加されていません")
-                async with timeout(300):
-                    data = await self.queue.get()
-            except asyncio.TimeoutError:  # 自動切断
-                await self.channel.send(embed=response.warning("一定時間、操作がなかったため接続を切りました。"))
-                return self.destroy(self.guild)
-            try:
-                source = await YTDLSource.stream(data, loop=self.bot.loop)
-            except asyncio.CancelledError:
-                return
-            except:
-                await self.channel.send(embed=response.error(f"音楽の処理中にエラーが発生しました\n```py\n{traceback2.format_exc()}```"))
-                continue
-            source.volume = self.volume
-            self.current = source
-            self.guild.voice_client.play(
-                source,
-                after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
-            )
-            if self.menu:  # 再生中の曲はソースから情報を取得するため再生処理の後に実行
-                await self.menu.update()
-            if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
-                if self.guild.voice_client.channel.instance is None:
-                    await self.guild.voice_client.channel.create_instance(topic=source.title)
-                else:
-                    await self.guild.voice_client.channel.instance.edit(topic=source.title)
-            await self.next.wait()
-            self.guild.voice_client.stop()
-            self.current = None
-            if self.loop == 2:
-                await self.queue.put(data)
-            elif self.loop == 1:
-                self.queue._queue.appendleft(data)
+        try:
+            while True:
+                self.next.clear()
+                try:
+                    if len(self.queue._queue) == 0:
+                        if self.menu is not None:
+                            await self.menu.update()  # 予約曲が0でメニューがある場合
+                        if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
+                            if self.guild.voice_client.channel.instance is not None:
+                                await self.guild.voice_client.channel.instance.edit(topic="まだ曲が追加されていません")
+                    async with timeout(300):
+                        data = await self.queue.get()
+                except asyncio.TimeoutError:  # 自動切断
+                    await self.channel.send(embed=response.warning("一定時間、操作がなかったため接続を切りました。"))
+                    return self.destroy(self.guild)
+                try:
+                    source = await YTDLSource.stream(data, loop=self.bot.loop)
+                except asyncio.CancelledError:
+                    return
+                except:
+                    await self.channel.send(embed=response.error(f"音楽の処理中にエラーが発生しました\n```py\n{traceback2.format_exc()}```"))
+                    continue
+                source.volume = self.volume
+                self.current = source
+                self.guild.voice_client.play(
+                    source,
+                    after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
+                )
+                if self.menu:  # 再生中の曲はソースから情報を取得するため再生処理の後に実行
+                    await self.menu.update()
+                if self.guild.voice_client.channel.type == discord.ChannelType.stage_voice and self.guild.voice_client.channel.permissions_for(self.guild.me).manage_channels:
+                    if self.guild.voice_client.channel.instance is None:
+                        await self.guild.voice_client.channel.create_instance(topic=source.title)
+                    else:
+                        await self.guild.voice_client.channel.instance.edit(topic=source.title)
+                await self.next.wait()
+                self.guild.voice_client.stop()
+                self.current = None
+                if self.loop == 1:
+                    self.queue._queue.appendleft(data)
+                elif self.loop == 2:
+                    await self.queue.put(data)
+                elif self.loop == 3 and len(self.queue._queue) == 0:
+                    video_id = await get_related_video(self.session, data["id"], self.history)
+                    if video_id is not None:
+                        self.history.append(video_id)  # 履歴管理
+                        if len(self.history) > 5:  # max: 5
+                            del self.history[1]
+                        data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
+                        await self.queue.put(data)
+        except:
+            await self.bot.get_channel(964431944484016148).send(f"```py\n{traceback2.format_exc()}\n```")
+            print(traceback2.format_exc())
 
     def destroy(self, guild: discord.Guild):
         """パネル破棄"""
+        self.bot.loop.create_task(self.session.close())
         return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
 
 
@@ -225,7 +263,12 @@ class MenuView(discord.ui.View):
             button.emoji = emoji.repeat
             button.style = discord.ButtonStyle.green
             embed = response.success("予約された曲全体の曲の繰り返しを有効にしました")
-        else:  # 2
+        elif player.loop == 2:
+            player.loop += 1
+            button.emoji = emoji.auto
+            button.style = discord.ButtonStyle.red
+            embed = response.success("曲の自動再生を有効にしました")
+        else:  # 3
             player.loop = 0
             button.emoji = emoji.repeat
             button.style = discord.ButtonStyle.grey
@@ -275,7 +318,7 @@ class MenuView(discord.ui.View):
     async def help(self, interaction: discord.Interaction, button: discord.ui.Button):
         """予約済み曲のクリア"""
         embed = discord.Embed(color=discord.Color.blue())
-        embed.description = f"{emoji.repeat} ... 曲のループ設定です(押すごとに 1曲繰り返し/全曲繰り返し/オフ と切り替わります)\n" \
+        embed.description = f"{emoji.repeat} ... 曲のループ設定です(押すごとに 1曲繰り返し/全曲繰り返し/自動再生/オフ と切り替わります)\n" \
                             f"{emoji.shuffle} .. .曲をシャッフルします\n" \
                             f"{emoji.pause} ... 音楽の再生を停止/再開します\n" \
                             f"{emoji.skip} ... 再生中の曲をスキップします\n" \
