@@ -181,7 +181,6 @@ class Player:
 
     def destroy(self, guild: discord.Guild):
         """パネル破棄"""
-        self.bot.loop.create_task(self.session.close())
         return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
 
 
@@ -517,6 +516,7 @@ class Music(commands.Cog):
                 else:
                     try:
                         self.players[member.guild.id].task.cancel()
+                        await self.players[member.guild.id].session.close()
                         if self.players[member.guild.id].menu is not None:
                             self.bot.loop.create_task(self.players[member.guild.id].menu.destroy())
                         del self.players[member.guild.id]
