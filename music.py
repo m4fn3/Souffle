@@ -168,11 +168,11 @@ class Player:
                 elif self.loop == 2:
                     await self.queue.put(data)
                 elif self.loop == 3 and len(self.queue._queue) == 0:
+                    self.history.append(data["id"])  # 履歴管理
+                    if len(self.history) > 5:  # max: 5
+                        del self.history[1]
                     video_id = await get_related_video(self.session, data["id"], self.history)
                     if video_id is not None:
-                        self.history.append(video_id)  # 履歴管理
-                        if len(self.history) > 5:  # max: 5
-                            del self.history[1]
                         data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
                         await self.queue.put(data)
         except:
