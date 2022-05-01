@@ -161,6 +161,8 @@ class Player:
                     else:
                         await self.guild.voice_client.channel.instance.edit(topic=source.title)
                 await self.next.wait()
+                if self.guild is None:  # 切断時エラー対策
+                    break
                 self.guild.voice_client.stop()
                 self.current = None
                 if self.loop == 1:
@@ -175,9 +177,10 @@ class Player:
                     if video_id is not None:
                         data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
                         await self.queue.put(data)
-        except:
+        except asyncio.exceptions.CancelledError:
+            pass
+        except:  # エラーを報告
             await self.bot.get_channel(964431944484016148).send(f"```py\n{traceback2.format_exc()}\n```")
-            print(traceback2.format_exc())
 
     def destroy(self, guild: discord.Guild):
         """パネル破棄"""
@@ -391,7 +394,7 @@ class Menu:
     async def initialize(self):
         """初期化処理(非同期)"""
         self.view = MenuView(self.interaction)
-        self.msg = await self.channel.send("読込中...", view=self.view)
+        self.msg = await self.channel.send(embed=response.normal("読込中..."), view=self.view)
         await self.update()
 
     async def update(self, view: discord.ui.View = None, page: int = 1):
@@ -448,6 +451,7 @@ class Music(commands.Cog):
         """初期化処理"""
         self.bot = bot
         self.players = {}
+        self.wait_leave = {}
 
     def get_player(self, interaction: discord.Interaction):
         """プレイヤーの取得"""
@@ -506,11 +510,6 @@ class Music(commands.Cog):
         if before.channel is not None and after.channel is None:  # 退出
             bot_member = member.guild.get_member(self.bot.user.id)
             if member == bot_member:  # botの退出
-                # ***** 一時的なバグ追跡用ログ *****
-                i = f"{dt.now().strftime('%Y/%m/%d %H:%M:%S')} | {member.guild.name}/{before.channel.name}"
-                i += f" - vcl: True / p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
-                msg = await self.bot.get_channel(964431944484016148).send(i)
-                # *******************************
                 if member.guild.voice_client is not None and (member.guild.voice_client._potentially_reconnecting or member.guild.voice_client._handshaking):
                     pass  # 一時的な再接続の場合はデータを保持する
                 else:
@@ -522,21 +521,27 @@ class Music(commands.Cog):
                         del self.players[member.guild.id]
                     except:
                         pass
-
-                # *******************************
-                await asyncio.sleep(5)
-                i += f" - vcl: True / p_r: {member.guild.voice_client._potentially_reconnecting} , hs: {member.guild.voice_client._handshaking}" if member.guild.voice_client is not None else " - vcl: False"
-                await msg.edit(content=i)
-                # *******************************
             # 自動切断
             elif bot_member in before.channel.members:  # BOT接続しているVC
                 voice_members = before.channel.members
                 real_members = discord.utils.get(voice_members, bot=False)
                 if len(voice_members) == 1 or real_members is None:
-                    if member.guild.voice_client.channel.type == discord.ChannelType.stage_voice and member.guild.voice_client.channel.permissions_for(member.guild.me).manage_channels:
-                        if member.guild.voice_client.channel.instance is not None:
-                            await member.guild.voice_client.channel.instance.delete()
-                    await member.guild.voice_client.disconnect()
+                    flag = asyncio.Event()
+                    self.wait_leave[before.channel.id] = flag
+                    try:
+                        async with timeout(180):
+                            await flag.wait()
+                    except asyncio.TimeoutError:
+                        if member.guild.voice_client.channel.type == discord.ChannelType.stage_voice and member.guild.voice_client.channel.permissions_for(member.guild.me).manage_channels:
+                            if member.guild.voice_client.channel.instance is not None:
+                                await member.guild.voice_client.channel.instance.delete()
+                        await member.guild.voice_client.disconnect()
+                    finally:
+                        del self.wait_leave[before.channel.id]
+        elif before.channel is None and after.channel is not None:  # 入室
+            if after.channel.id in self.wait_leave:  # 切断保留中に入室した場合解除
+                flag = self.wait_leave[after.channel.id]
+                flag.set()
 
     async def log(self, interaction: discord.Interaction, name: str):
         self.bot.cmd_count += 1

@@ -169,8 +169,10 @@ class Developer(commands.Cog):
             try:
                 if cog == "music":
                     players = self.bot.get_cog("Music").players
+                    wait_leave = self.bot.get_cog("Music").wait_leave
                     await self.bot.reload_extension("music")
                     self.bot.get_cog("Music").players = players
+                    self.bot.get_cog("Music").wait_leave = wait_leave
                 else:
                     await self.bot.reload_extension(cog)
             except:
