@@ -1,6 +1,7 @@
 import pickle
 
 import aiohttp
+from bs4 import BeautifulSoup
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -415,7 +416,7 @@ class Menu:
 
         embed = discord.Embed(description=text, color=discord.Color.blurple())
         footer = f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)"
-        embed.set_footer(text=footer + "\n※ボタンや入力画面が表示されない場合はDiscordを最新版にアップデートしてください" if player.queue.empty() else footer)
+        embed.set_footer(text=footer)
 
         if view is None:
             await self.msg.edit(content=None, embed=embed)
@@ -569,6 +570,20 @@ class Music(commands.Cog):
         menu = Menu(interaction)
         await menu.initialize()  # 初期化完了後にメニュー登録
         player.menu = menu
+
+    @app_commands.command(name="lyrics", description="歌詞を表示します(正確な曲名の入力が必要)")
+    async def lyrics(self, interaction: discord.Interaction, title: str):
+        headers = {'User-Agent': 'python-requests/2.26.0', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive'}
+        resp = await self.bot.aiohttp_session.get(f"https://www.google.com/search?q={title}+lyrics", headers=headers)
+        page = await resp.text()
+        soup = BeautifulSoup(page, "html.parser")
+        try:
+            lyrics = soup.find_all("div", class_="BNeawe tAd8D AP7Wnd")[-1].text
+            meta = soup.find("div", class_="kCrYT").text
+        except:
+            await interaction.response.send_message(embed=response.error("歌詞が見つかりませんでした。曲名が正確に入力されているか確認してください。"))
+        else:
+            await interaction.response.send_message(embed=response.normal(text=lyrics, title=meta))
 
     @app_commands.command(name="invite", description="各種招待リンクを表示します")
     async def invite(self, interaction: discord.Interaction):
