@@ -608,6 +608,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="lyrics", description="歌詞を表示します(正確な曲名の入力が必要)")
     async def lyrics(self, interaction: discord.Interaction, title: str):
+        await self.log(interaction, f"lyrics {title}")
         headers = {'User-Agent': 'python-requests/2.26.0', 'Accept-Encoding': 'gzip, deflate, br', 'Accept': '*/*', 'Connection': 'keep-alive'}
         resp = await self.bot.aiohttp_session.get(f"https://www.google.com/search?q={title}+lyrics", headers=headers)
         page = await resp.text()
@@ -622,6 +623,7 @@ class Music(commands.Cog):
 
     @app_commands.command(name="invite", description="各種招待リンクを表示します")
     async def invite(self, interaction: discord.Interaction):
+        await self.log(interaction, "invite")
         embed = discord.Embed(title="MilkCoffee", color=discord.Color.blue())
         embed.description = "音楽以外の諸機能は仕様変更の影響によりMilkCafeに移行されました。\n" \
                             "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafe"
