@@ -8,7 +8,6 @@ from discord import app_commands
 
 import asyncio
 from async_timeout import timeout
-from datetime import datetime as dt
 import os
 import random
 import re
@@ -162,9 +161,10 @@ class Player:
                     else:
                         await self.guild.voice_client.channel.instance.edit(topic=source.title)
                 await self.next.wait()
-                if self.guild is None:  # 切断時エラー対策
+                try:
+                    self.guild.voice_client.stop()
+                except AttributeError:  # 切断時対策
                     break
-                self.guild.voice_client.stop()
                 self.current = None
                 if self.loop == 1:
                     self.queue._queue.appendleft(data)
