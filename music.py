@@ -1,3 +1,4 @@
+import json
 import pickle
 
 import aiohttp
@@ -80,7 +81,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
         )
 
 
-async def get_related_video(session: aiohttp.ClientSession, video_id: str, history: list) -> Union[str, None]:
+async def get_related_video(session: aiohttp.ClientSession, video_id: str, duration: int, history: list) -> Union[str, None]:
     """関連動画をinnertubeで取得"""
     params = {'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8', 'alt': 'json'}
     resp = await session.post(
@@ -89,12 +90,20 @@ async def get_related_video(session: aiohttp.ClientSession, video_id: str, histo
     )
     data = await resp.json()
     items = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"]["results"]
+    with open("dump.json", "w") as f:
+        json.dump(items, f)
     ids = [
         item["compactVideoRenderer"]["videoId"] for item in items
-        if "compactVideoRenderer" in item and "videoId" in item["compactVideoRenderer"] and item["compactVideoRenderer"]["videoId"] not in history
+        if "compactVideoRenderer" in item and "videoId" in item["compactVideoRenderer"] and item["compactVideoRenderer"]["videoId"] not in history and
+           "lengthText" in item["compactVideoRenderer"] and text_to_duration(item["compactVideoRenderer"]["lengthText"]["simpleText"]) <= duration * 4
     ]
     if len(ids) == 0:
-        return None
+        ids = [
+            item["compactVideoRenderer"]["videoId"] for item in items
+            if "compactVideoRenderer" in item and "videoId" in item["compactVideoRenderer"] and item["compactVideoRenderer"]["videoId"] not in history
+        ]
+        if len(ids) == 0:
+            return None
     return ids[0]
 
 
@@ -174,7 +183,7 @@ class Player:
                     self.history.append(data["id"])  # 履歴管理
                     if len(self.history) > 5:  # max: 5
                         del self.history[1]
-                    video_id = await get_related_video(self.session, data["id"], self.history)
+                    video_id = await get_related_video(self.session, data["id"], data["duration"],self.history)
                     if video_id is not None:
                         data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
                         await self.queue.put(data)
@@ -314,7 +323,9 @@ class MenuView(discord.ui.View):
     async def skip(self, interaction: discord.Interaction, button: discord.ui.Button):
         """曲のスキップ"""
         msg = await self.cog.skip(interaction)
-        await self.update(msg)
+        player = self.cog.get_player(interaction)
+        if player.loop != 3:
+            await self.update(msg)
         await interaction.response.defer()
 
     @discord.ui.button(emoji=emoji.question)
@@ -388,6 +399,7 @@ class Menu:
         self.interaction = interaction
         self.bot = interaction.client
         self.channel = interaction.channel
+        self.guild = interaction.guild
         self.page = 1
         self.msg = None
         self.view = None
@@ -395,6 +407,19 @@ class Menu:
     async def initialize(self):
         """初期化処理(非同期)"""
         self.view = MenuView(self.interaction)
+        if self.guild.voice_client.is_paused():
+            self.view.play.emoji = emoji.play
+            self.view.play.style = discord.ButtonStyle.green
+        player = self.bot.get_cog("Music").get_player(self.interaction)
+        if player.loop == 1:
+            self.view.loop.emoji = emoji.repeat_one
+            self.view.loop.style = discord.ButtonStyle.blurple
+        elif player.loop == 2:
+            self.view.loop.emoji = emoji.repeat
+            self.view.loop.style = discord.ButtonStyle.green
+        elif player.loop == 3:
+            self.view.loop.emoji = emoji.auto
+            self.view.loop.style = discord.ButtonStyle.red
         self.msg = await self.channel.send(embed=response.normal("読込中..."), view=self.view)
         await self.update()
 
@@ -405,7 +430,7 @@ class Menu:
         self.page = page
         text = ""
         if voice_client.source is not None:
-            text += f"\n再生中:\n [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
+            text += f"{emoji.play} [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
             text += "──────────────"
         elif player.queue.empty():
             text += f"まだ曲が追加されていません\n──────────────\n{emoji.add}を押して曲を追加しましょう!\n詳しくは{emoji.question}を押して確認してください"
@@ -413,6 +438,9 @@ class Menu:
         for i in range(10 * (page - 1), min(len(player.queue._queue), 10 * page)):  # 最大10曲
             d = player.queue._queue[i]
             text += f"\n{i + 1}. [{d['title']}]({d['webpage_url']}) | {duration_to_text(d['duration'])}"
+
+        if player.loop == 3 and voice_client.source is not None:
+            text += f"\n∞ [<<関連曲の自動再生>>](https://discord.com/channels/{self.guild.id}/{self.channel.id})"
 
         embed = discord.Embed(description=text, color=discord.Color.blurple())
         footer = f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)"
@@ -443,6 +471,15 @@ def duration_to_text(seconds: int) -> str:
         return "%d:%02d:%02d" % (hour, minutes, seconds)
     else:
         return "%02d:%02d" % (minutes, seconds)
+
+
+def text_to_duration(length: str) -> int:
+    """秒への変換"""
+    l = length.split(":")
+    duration = 0
+    for idx, t in enumerate(l):
+        duration += (60 ** (len(l) - idx - 1)) * int(t)
+    return duration
 
 
 class Music(commands.Cog):

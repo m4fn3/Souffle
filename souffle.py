@@ -1,3 +1,5 @@
+import asyncio
+
 import discord
 from discord.ext import commands
 import pickle
@@ -23,6 +25,7 @@ class Souffle(commands.Bot):
         self.aiohttp_session = aiohttp.ClientSession(loop=self.loop)
         await self.load_extension("music")
         await self.load_extension("developer")
+        await asyncio.sleep(3)
         await self.tree.sync()
         await self.tree.sync(guild=dev_guild)
 
