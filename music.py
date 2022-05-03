@@ -90,8 +90,6 @@ async def get_related_video(session: aiohttp.ClientSession, video_id: str, durat
     )
     data = await resp.json()
     items = data["contents"]["twoColumnWatchNextResults"]["secondaryResults"]["secondaryResults"]["results"]
-    with open("dump.json", "w") as f:
-        json.dump(items, f)
     ids = [
         item["compactVideoRenderer"]["videoId"] for item in items
         if "compactVideoRenderer" in item and "videoId" in item["compactVideoRenderer"] and item["compactVideoRenderer"]["videoId"] not in history and
@@ -215,7 +213,7 @@ class Request(discord.ui.Modal, title="楽曲追加"):
         await self.cog.get_player(interaction).menu.update()
         await msg.delete(delay=3)
 
-    async def on_error(self, error: Exception, interaction: discord.Interaction):
+    async def on_error(self, interaction: discord.Interaction, error: Exception):
         """例外発生時"""
         await interaction.channel.send(embed=response.error(f"処理中に予期しないエラーが発生しました。\n```\n{traceback2.format_exc()}```"))
 
