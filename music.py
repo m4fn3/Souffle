@@ -13,7 +13,7 @@ import os
 import random
 import re
 import traceback2
-from typing import Union
+from typing import Union, Optional
 import yt_dlp as youtube_dl
 
 import response
@@ -428,7 +428,7 @@ class Menu:
         self.page = page
         text = ""
         if voice_client.source is not None:
-            text += f"{emoji.play} [{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
+            text += f"▷[{voice_client.source.title}]({voice_client.source.url}) | {duration_to_text(voice_client.source.duration)}\n"
             text += "──────────────"
         elif player.queue.empty():
             text += f"まだ曲が追加されていません\n──────────────\n{emoji.add}を押して曲を追加しましょう!\n詳しくは{emoji.question}を押して確認してください"
@@ -438,7 +438,7 @@ class Menu:
             text += f"\n{i + 1}. [{d['title']}]({d['webpage_url']}) | {duration_to_text(d['duration'])}"
 
         if player.loop == 3 and voice_client.source is not None:
-            text += f"\n∞ [<<関連曲の自動再生>>](https://discord.com/channels/{self.guild.id}/{self.channel.id})"
+            text += f"\n⇒ [関連曲の自動再生](https://discord.com/channels/{self.guild.id}/{self.channel.id})"
 
         embed = discord.Embed(description=text, color=discord.Color.blurple())
         footer = f"\n\n現在{len(player.queue._queue)}曲が予約されています ({page} / {len(player.queue._queue) // 10 + 1} ページ)"
@@ -590,7 +590,12 @@ class Music(commands.Cog):
         await self.bot.aiohttp_session.post(os.getenv("LOG_WH"), json=content, headers=headers)
 
     @app_commands.command(name="player", description="音楽再生操作パネルを起動します")
-    async def player_(self, interaction: discord.Interaction):
+    @app_commands.choices(loop=[
+        app_commands.Choice(name="一曲繰り返し", value=1),
+        app_commands.Choice(name="全曲繰り返し", value=2),
+        app_commands.Choice(name="自動再生", value=3),
+    ])
+    async def player_(self, interaction: discord.Interaction, loop: Optional[app_commands.Choice[int]]):
         """操作パネルの起動"""
         await self.log(interaction, "player")
         # VCに接続していることを確認
@@ -602,6 +607,8 @@ class Music(commands.Cog):
             old_menu = player.menu  # destroy()してからmenuがNoneになるまでの間にplayer_loopがメッセージを編集しようとするのを防ぐ
             player.menu = None  # 先にNone化
             await old_menu.destroy()
+        if loop is not None:
+            player.loop = loop.value
         menu = Menu(interaction)
         await menu.initialize()  # 初期化完了後にメニュー登録
         player.menu = menu
