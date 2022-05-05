@@ -13,7 +13,7 @@ import os
 import random
 import re
 import traceback2
-from typing import Union, Optional
+from typing import Union, Optional, List
 import yt_dlp as youtube_dl
 
 import response
@@ -42,6 +42,7 @@ ffmpeg_options = {
 }
 
 ytdl = youtube_dl.YoutubeDL(ytdl_options)
+yt_params = {'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8', 'alt': 'json'}
 
 emoji = Emoji()
 
@@ -83,9 +84,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 async def get_related_video(session: aiohttp.ClientSession, video_id: str, duration: int, history: list) -> Union[str, None]:
     """関連動画をinnertubeで取得"""
-    params = {'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8', 'alt': 'json'}
     resp = await session.post(
-        "https://youtubei.googleapis.com/youtubei/v1/next/", params=params,
+        "https://youtubei.googleapis.com/youtubei/v1/next/", params=yt_params,
         json={'videoId': video_id, 'context': {'client': {'clientName': 'WEB', 'clientVersion': '2.20210223.09.00'}}}
     )
     data = await resp.json()
@@ -181,7 +181,7 @@ class Player:
                     self.history.append(data["id"])  # 履歴管理
                     if len(self.history) > 5:  # max: 5
                         del self.history[1]
-                    video_id = await get_related_video(self.session, data["id"], data["duration"],self.history)
+                    video_id = await get_related_video(self.session, data["id"], data["duration"], self.history)
                     if video_id is not None:
                         data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
                         await self.queue.put(data)
@@ -613,6 +613,35 @@ class Music(commands.Cog):
         await menu.initialize()  # 初期化完了後にメニュー登録
         player.menu = menu
 
+    @app_commands.command(name="search", description="音楽を検索します(自動的に候補が表示されます)")
+    async def search(self, interaction: discord.Interaction, query: str):
+        if interaction.guild.id not in self.players:
+            return await interaction.response.send_message(embed=response.error("BOTはまだボイスチャンネルに接続していません"))
+        embed = await self.process(interaction, query, False)
+        await self.get_player(interaction).menu.update()
+        await interaction.response.send_message(embed=embed)
+        ret_msg = await interaction.original_message()
+        await ret_msg.delete(delay=3)
+
+    @search.autocomplete("query")
+    async def query_autocomplete(self, interaction: discord.Interaction, query: str) -> List[app_commands.Choice[str]]:
+        if interaction.guild.id not in self.players:
+            return []
+        player = self.get_player(interaction)
+        if query == "":
+            return []
+        resp = await player.session.post(
+            "https://youtubei.googleapis.com/youtubei/v1/search/", params=yt_params,
+            json={'query': query, 'context': {'client': {'clientName': 'WEB', 'clientVersion': '2.20210223.09.00'}}}
+        )
+        data = await resp.json()
+        results = data["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"]["sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"]
+        return [app_commands.Choice(name=res["videoRenderer"]["title"]["runs"][0]["text"], value=res["videoRenderer"]["videoId"]) for res in results if "videoRenderer" in res]
+        # ### 入力補完ver. ###
+        # resp = await player.session.get(f"https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q={query}")
+        # data = await resp.json(content_type=None)  # 既定の text/javascript を無視してデコード
+        # return [app_commands.Choice(name=name, value=name) for name in data[1]]
+
     @app_commands.command(name="lyrics", description="歌詞を表示します(正確な曲名の入力が必要)")
     async def lyrics(self, interaction: discord.Interaction, title: str):
         await self.log(interaction, f"lyrics {title}")
@@ -674,7 +703,7 @@ class Music(commands.Cog):
             # await interaction.response.send_message(embed=response.warning(f"既に{interaction.user.voice.channel.name}に接続しています"))
             await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に接続しています"), ephemeral=True)
 
-    async def process(self, interaction: discord.Interaction, search: str, suppress: bool) -> Union[int, discord.Message]:
+    async def process(self, interaction: discord.Interaction, search: str, suppress: bool) -> Union[int, discord.Embed]:
         """楽曲のデータ取得処理"""
         player = self.get_player(interaction)
         async with interaction.channel.typing():
@@ -686,14 +715,14 @@ class Music(commands.Cog):
             else:  # video, search
                 data = await YTDLSource.create_source(search, loop=self.bot.loop)
         if data is None:
-            return 0 if suppress else await interaction.channel.send(embed=response.error(f"一致する検索結果はありませんでした:\n {search}"))
+            return 0 if suppress else response.error(f"一致する検索結果はありませんでした:\n {search}")
         elif data["extractor"] in ["youtube", "youtube:search"]:  # URL指定または検索
             if data["extractor"] == "youtube:search":  # 検索
                 if not data["entries"]:
-                    return 0 if suppress else await interaction.channel.send(embed=response.error(f"一致する検索結果はありませんでした:\n {search}"))
+                    return 0 if suppress else response.error(f"一致する検索結果はありませんでした:\n {search}")
                 data = data["entries"][0]
             await player.queue.put(data)
-            return 1 if suppress else await interaction.channel.send(embed=response.success(f"{data['title']}を追加しました"))
+            return 1 if suppress else response.success(f"{data['title']}を追加しました")
         elif data["extractor"] == "youtube:tab":  # プレイリスト
             meta_count = 0
             for meta in data["entries"]:
@@ -702,7 +731,7 @@ class Music(commands.Cog):
                 meta["webpage_url"] = "https://www.youtube.com/watch?v=" + meta["id"]
                 await player.queue.put(meta)
                 meta_count += 1
-            return meta_count if suppress else await interaction.channel.send(embed=response.success(f"{data['title']}から{meta_count}曲を追加しました"))
+            return meta_count if suppress else response.success(f"{data['title']}から{meta_count}曲を追加しました")
 
     async def play(self, interaction: discord.Interaction, query: str) -> discord.Message:
         """音楽の追加"""
@@ -711,9 +740,10 @@ class Music(commands.Cog):
         #         return
         await interaction.response.send_message(embed=response.normal("読込中..."))
         query = [q for q in query.split("\n") if q != ""]
-        ret_msg: discord.Message
+        res_msg: discord.Message
         if len(query) == 1:
-            res_msg = await self.process(interaction, query[0], False)
+            embed = await self.process(interaction, query[0], False)
+            res_msg = await interaction.channel.send(embed=embed)
         else:  # 複数曲対応
             # TODO: 途中で切断処理が入った場合に停止する
             count = 0
