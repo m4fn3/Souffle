@@ -487,7 +487,7 @@ async def play_context_menu(interaction: discord.Interaction, message: discord.M
     else:
         voice_client = discord.utils.find(lambda v: message.author.id in [u.id for u in v.channel.members], interaction.client.voice_clients)
         if voice_client is None or voice_client.guild.id not in cog.players:
-            return await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"))
+            return await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"), ephemeral=True)
         guild_id = voice_client.guild.id
     msg = await cog.play(interaction, message.content, guild_id)
     await cog.players[guild_id].menu.update()
