@@ -1,4 +1,5 @@
 import asyncio
+import re
 from contextlib import redirect_stdout
 import datetime
 import discord
@@ -21,24 +22,64 @@ dev_guild = discord.Object(id=565434676877983772)
 admin = [513136168112750593, 519760564755365888, 561359054165901347, 585351496523186187, 822814328238506014]
 
 
-class ExeInput(discord.ui.Modal, title="コード実行"):
-    code = discord.ui.TextInput(label='プログラムを入力', style=discord.TextStyle.long)
+@app_commands.context_menu(name="音楽機能の利用承認 [管理者用]")
+@app_commands.guilds(dev_guild)
+async def accept_context_menu(interaction: discord.Interaction, message: discord.Message):
+    if interaction.user.id in admin:
+        match = re.search(r"\d{10,}", message.content)
+        if match is not None:
+            guild_id = int(match.group())
+            if guild_id not in interaction.client.verified_guilds:
+                guild = interaction.client.get_guild(guild_id)
+                if guild is None:
+                    await interaction.response.send_message(embed=response.error("そのサーバーに参加していません"))
+                else:
+                    interaction.client.verified_guilds.add(guild_id)
+                    await interaction.response.send_message(embed=response.success(f"{guild.name}での利用を承認しました"))
+                    with open('guilds.pickle', 'wb') as f:
+                        pickle.dump(interaction.client.verified_guilds, f)
+            else:
+                await interaction.response.send_message(embed=response.warning("そのサーバーはすでに承認されています"))
+        else:
+            await interaction.response.send_message(embed=response.error("無効なサーバーIDです"))
 
-    def __init__(self, bot: souffle.Souffle):
-        super().__init__()
-        self.bot = bot
 
-    async def on_submit(self, interaction: discord.Interaction):
+@app_commands.context_menu(name="音楽機能の利用拒否 [管理者用]")
+@app_commands.guilds(dev_guild)
+async def refuse_context_menu(interaction: discord.Interaction, message: discord.Message):
+    if interaction.user.id in admin:
+        match = re.search(r"\d{10,}", message.content)
+        if match is not None:
+            guild_id = int(match.group())
+            if guild_id in interaction.client.verified_guilds:
+                guild = interaction.client.get_guild(guild_id)
+                if guild is None:
+                    interaction.client.verified_guilds.discard(guild_id)
+                    await interaction.response.send_message(embed=response.warning("そのサーバーでの使用を拒否しました"))
+                else:
+                    interaction.client.verified_guilds.discard(guild_id)
+                    await interaction.response.send_message(embed=response.success(f"{guild.name}での利用を拒否しました"))
+                with open('guilds.pickle', 'wb') as f:
+                    pickle.dump(interaction.client.verified_guilds, f)
+            else:
+                await interaction.response.send_message(embed=response.warning("そのサーバーはまだ承認されていません"))
+        else:
+            await interaction.response.send_message(embed=response.error("無効なサーバーIDです"))
 
+
+@app_commands.context_menu(name="任意コードの実行 [管理者用]")
+@app_commands.guilds(dev_guild)
+async def exe_context_menu(interaction: discord.Interaction, message: discord.Message):
+    if interaction.user.id in admin:
         env = {
-            'bot': self.bot,
+            'bot': interaction.client,
             'interaction': interaction,
             'channel': interaction.channel,
             'guild': interaction.guild,
             'message': interaction.message
         }
         env.update(globals())
-        code = self.code.value
+        code = message.content
         if code.startswith('```') and code.endswith('```'):
             code = '\n'.join(code.split('\n')[1:-1])
         code = code.strip("` \n")
@@ -67,7 +108,7 @@ class ExeInput(discord.ui.Modal, title="コード実行"):
                     result = f"{value}{ret}"
         except Exception as e:
             result = f"{e.__class__.__name__}: {e}"
-        await interaction.response.send_message(code, embed=discord.Embed(description=f"```py\n{result}\n```"), ephemeral=True)
+        await interaction.response.send_message(f"```py\n{result}\n```", ephemeral=True)
 
 
 class Developer(commands.Cog):
@@ -77,48 +118,8 @@ class Developer(commands.Cog):
         """初期化処理"""
         self.bot = bot
 
-    @app_commands.command(description="[管理者用] 音楽機能の利用を承認します")
-    @app_commands.guilds(dev_guild)
-    async def accept(self, interaction: discord.Interaction, guild_id: str):
-        """利用承認"""
-        if interaction.user.id in admin:
-            try:
-                guild_id = int(guild_id)
-            except:
-                return await interaction.response.send_message(embed=response.error("無効なサーバーIDです"))
-            if guild_id not in self.bot.verified_guilds:
-                guild = self.bot.get_guild(guild_id)
-                if guild is None:
-                    await interaction.response.send_message(embed=response.error("そのサーバーに参加していません"))
-                else:
-                    self.bot.verified_guilds.add(guild_id)
-                    await interaction.response.send_message(embed=response.success(f"{guild.name}での利用を承認しました"))
-                    with open('guilds.pickle', 'wb') as f:
-                        pickle.dump(self.bot.verified_guilds, f)
-            else:
-                await interaction.response.send_message(embed=response.warning("そのサーバーはすでに承認されています"))
-
-    @app_commands.command(description="[管理者用] 音楽機能の利用を拒否します")
-    @app_commands.guilds(dev_guild)
-    async def refuse(self, interaction: discord.Interaction, guild_id: str):
-        """利用拒否"""
-        if interaction.user.id in admin:
-            try:
-                guild_id = int(guild_id)
-            except:
-                return await interaction.response.send_message(embed=response.error("無効なサーバーIDです"))
-            if guild_id in self.bot.verified_guilds:
-                guild = self.bot.get_guild(guild_id)
-                if guild is None:
-                    self.bot.verified_guilds.discard(guild_id)
-                    await interaction.response.send_message(embed=response.warning("そのサーバーでの使用を拒否しました"))
-                else:
-                    self.bot.verified_guilds.discard(guild_id)
-                    await interaction.response.send_message(embed=response.success(f"{guild.name}での利用を拒否しました"))
-                with open('guilds.pickle', 'wb') as f:
-                    pickle.dump(self.bot.verified_guilds, f)
-            else:
-                await interaction.response.send_message(embed=response.warning("そのサーバーはまだ承認されていません"))
+        for ctx_menu in [accept_context_menu, refuse_context_menu, exe_context_menu]:
+            self.bot.tree.add_command(ctx_menu, guild=dev_guild)
 
     @app_commands.command(description="[管理者用] BOTの稼働情報を表示します")
     @app_commands.guilds(dev_guild)
@@ -197,12 +198,6 @@ class Developer(commands.Cog):
             await self.bot.tree.sync()
             await self.bot.tree.sync(guild=dev_guild)
             await interaction.response.send_message(embed=response.success("同期に成功しました"), ephemeral=True)
-
-    @app_commands.command(description="[管理者用] 任意のプログラムを実行します")
-    @app_commands.guilds(dev_guild)
-    async def exe(self, interaction: discord.Interaction):
-        if interaction.user.id in admin:
-            await interaction.response.send_modal(ExeInput(self.bot))
 
     async def run_subprocess(self, cmd: str, loop=None):
         loop = loop or asyncio.get_event_loop()

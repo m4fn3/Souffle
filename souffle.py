@@ -1,4 +1,3 @@
-
 import discord
 from discord.ext import commands
 import pickle
@@ -26,4 +25,3 @@ class Souffle(commands.Bot):
         await self.load_extension("developer")
         await self.tree.sync()
         await self.tree.sync(guild=dev_guild)
-

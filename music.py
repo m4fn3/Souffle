@@ -1,4 +1,3 @@
-import json
 import pickle
 
 import aiohttp
@@ -168,31 +167,30 @@ class Player:
                     else:
                         await self.guild.voice_client.channel.instance.edit(topic=source.title)
                 await self.next.wait()
-                try:
-                    self.guild.voice_client.stop()
-                except AttributeError:  # 切断時対策
-                    break
-                self.current = None
-                if self.loop == 1:
-                    self.queue._queue.appendleft(data)
-                elif self.loop == 2:
+            self.guild.voice_client.stop()
+            self.current = None
+            if self.loop == 1:
+                self.queue._queue.appendleft(data)
+            elif self.loop == 2:
+                await self.queue.put(data)
+            elif self.loop == 3 and len(self.queue._queue) == 0:
+                self.history.append(data["id"])  # 履歴管理
+                if len(self.history) > 5:  # max: 5
+                    del self.history[1]
+                video_id = await get_related_video(self.session, data["id"], data["duration"], self.history)
+                if video_id is not None:
+                    data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
                     await self.queue.put(data)
-                elif self.loop == 3 and len(self.queue._queue) == 0:
-                    self.history.append(data["id"])  # 履歴管理
-                    if len(self.history) > 5:  # max: 5
-                        del self.history[1]
-                    video_id = await get_related_video(self.session, data["id"], data["duration"], self.history)
-                    if video_id is not None:
-                        data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
-                        await self.queue.put(data)
+
         except asyncio.exceptions.CancelledError:
             pass
-        except:  # エラーを報告
-            await self.bot.get_channel(964431944484016148).send(f"```py\n{traceback2.format_exc()}\n```")
+        # except:  # エラーを報告
+        #     await self.bot.get_channel(964431944484016148).send(f"```py\n{traceback2.format_exc()}\n```")
 
-    def destroy(self, guild: discord.Guild):
-        """パネル破棄"""
-        return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
+
+def destroy(self, guild: discord.Guild):
+    """パネル破棄"""
+    return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
 
 
 class Request(discord.ui.Modal, title="楽曲追加"):
@@ -480,6 +478,22 @@ def text_to_duration(length: str) -> int:
     return duration
 
 
+@app_commands.context_menu(name="検索して音楽を追加")
+async def play_context_menu(interaction: discord.Interaction, message: discord.Message):
+    cog = interaction.client.get_cog("Music")
+    guild_id: int
+    if interaction.guild.id in cog.players:
+        guild_id = interaction.guild.id
+    else:
+        voice_client = discord.utils.find(lambda v: message.author.id in [u.id for u in v.channel.members], interaction.client.voice_clients)
+        if voice_client is None or voice_client.guild.id not in cog.players:
+            return await interaction.response.send_message(embed=response.error("先にボイスチャンネルに接続してください!"))
+        guild_id = voice_client.guild.id
+    msg = await cog.play(interaction, message.content, guild_id)
+    await cog.players[guild_id].menu.update()
+    await msg.delete(delay=3)
+
+
 class Music(commands.Cog):
     """コマンド定義"""
 
@@ -488,6 +502,8 @@ class Music(commands.Cog):
         self.bot = bot
         self.players = {}
         self.wait_leave = {}
+
+        self.bot.tree.add_command(play_context_menu)
 
     def get_player(self, interaction: discord.Interaction):
         """プレイヤーの取得"""
@@ -703,9 +719,9 @@ class Music(commands.Cog):
             # await interaction.response.send_message(embed=response.warning(f"既に{interaction.user.voice.channel.name}に接続しています"))
             await interaction.response.send_message(embed=response.success(f"{interaction.user.voice.channel.name}に接続しています"), ephemeral=True)
 
-    async def process(self, interaction: discord.Interaction, search: str, suppress: bool) -> Union[int, discord.Embed]:
+    async def process(self, interaction: discord.Interaction, search: str, suppress: bool, server: Optional[int]) -> Union[int, discord.Embed]:
         """楽曲のデータ取得処理"""
-        player = self.get_player(interaction)
+        player = self.get_player(interaction) if server is None else self.players[server]
         async with interaction.channel.typing():
             if search.startswith(("http://", "https://")) and "list=" in search:  # playlist
                 match = re.search("[a-zA-Z0-9_-]{34}", search)
@@ -733,22 +749,18 @@ class Music(commands.Cog):
                 meta_count += 1
             return meta_count if suppress else response.success(f"{data['title']}から{meta_count}曲を追加しました")
 
-    async def play(self, interaction: discord.Interaction, query: str) -> discord.Message:
+    async def play(self, interaction: discord.Interaction, query: str, server: Optional[int] = None) -> discord.Message:
         """音楽の追加"""
-        # if interaction.guild.voice_client is None:
-        #     if await self.join(interaction):
-        #         return
         await interaction.response.send_message(embed=response.normal("読込中..."))
         query = [q for q in query.split("\n") if q != ""]
         res_msg: discord.Message
         if len(query) == 1:
-            embed = await self.process(interaction, query[0], False)
+            embed = await self.process(interaction, query[0], False, server)
             res_msg = await interaction.channel.send(embed=embed)
         else:  # 複数曲対応
-            # TODO: 途中で切断処理が入った場合に停止する
             count = 0
             for search in query:
-                count += await self.process(interaction, search, True)
+                count += await self.process(interaction, search, True, server)
             res_msg = await interaction.channel.send(embed=response.success(f"合計{count}曲を追加しました"))
         wait_msg = await interaction.original_message()
         await wait_msg.delete()
