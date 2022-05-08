@@ -617,11 +617,11 @@ class Music(commands.Cog):
     async def search(self, interaction: discord.Interaction, query: str):
         if interaction.guild.id not in self.players:
             return await interaction.response.send_message(embed=response.error("BOTはまだボイスチャンネルに接続していません"))
+        await interaction.response.defer()
         embed = await self.process(interaction, query, False)
         await self.get_player(interaction).menu.update()
-        await interaction.response.send_message(embed=embed)
-        ret_msg = await interaction.original_message()
-        await ret_msg.delete(delay=3)
+        msg = await interaction.followup.send(embed=embed)
+        await msg.delete(delay=3)
 
     @search.autocomplete("query")
     async def query_autocomplete(self, interaction: discord.Interaction, query: str) -> List[app_commands.Choice[str]]:
