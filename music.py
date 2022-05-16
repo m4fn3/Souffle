@@ -167,21 +167,20 @@ class Player:
                     else:
                         await self.guild.voice_client.channel.instance.edit(topic=source.title)
                 await self.next.wait()
-            self.guild.voice_client.stop()
-            self.current = None
-            if self.loop == 1:
-                self.queue._queue.appendleft(data)
-            elif self.loop == 2:
-                await self.queue.put(data)
-            elif self.loop == 3 and len(self.queue._queue) == 0:
-                self.history.append(data["id"])  # 履歴管理
-                if len(self.history) > 5:  # max: 5
-                    del self.history[1]
-                video_id = await get_related_video(self.session, data["id"], data["duration"], self.history)
-                if video_id is not None:
-                    data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
+                self.guild.voice_client.stop()
+                self.current = None
+                if self.loop == 1:
+                    self.queue._queue.appendleft(data)
+                elif self.loop == 2:
                     await self.queue.put(data)
-
+                elif self.loop == 3 and len(self.queue._queue) == 0:
+                    self.history.append(data["id"])  # 履歴管理
+                    if len(self.history) > 5:  # max: 5
+                        del self.history[1]
+                    video_id = await get_related_video(self.session, data["id"], data["duration"], self.history)
+                    if video_id is not None:
+                        data = await YTDLSource.create_source("https://www.youtube.com/watch?v=" + video_id, loop=self.bot.loop)
+                        await self.queue.put(data)
         except asyncio.exceptions.CancelledError:
             pass
         # except:  # エラーを報告
