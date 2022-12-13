@@ -22,7 +22,7 @@ class Emoji:
     repeat_one = "<:repeat_one:1052120746194915349>"
     add = "<:add:1052120748182995025>"
     remove = "<:remove:1052120749785227264>"
-    loop = "<:loop:1052120751349706752>"
+    repeat = "<:repeat:1052120751349706752>"
     shuffle = "<:shuffle:1052120752968716319>"
     disconnect = "<:disconnect:1052120754629644299>"
     play = "<:play:1052120756051529789>"
