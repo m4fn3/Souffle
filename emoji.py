@@ -19,3 +19,4 @@ class Emoji:
     next = "<:next:953209590684712970>"
     question = "<:question:953193559048204289>"
     auto = "<:auto:969787714981490698>"
+

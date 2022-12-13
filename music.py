@@ -522,19 +522,14 @@ class Music(commands.Cog):
         embed.description = f"👋 招待ありがとうございます!\n" \
                             "──────────────\n" \
                             f"[/](https://discord.com/channels/{guild.id}/{channel.id}) と入力して利用可能なコマンドを確認できます\n" \
-                            "※ 何も表示されない場合は下のボタンを押して権限を追加してください\n" \
                             "──────────────\n" \
                             f"[/player](https://discord.com/channels/{guild.id}/{channel.id}) ... 音楽操作パネルを表示"
-        embed.set_footer(text="音楽再生以外の装飾等の機能はDiscordの破壊的変更の影響によりMilkCaféに移行されました。必要な場合は下のボタンから別途追加してください。\n"
-                              "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafé. Please click the button below to invite.")
+        embed.set_footer(text="装飾シミュレータは新たに作り直されたため以下のウェブサイトで利用できます！\n"
+                              "Outfit simulator has been redesigned and now available as website!")
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
-            label="権限を追加",
-            url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands&guild_id={guild.id}")
-        )
-        view.add_item(discord.ui.Button(
-            label="MilkCaféを追加",
-            url=f"https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8&guild_id={guild.id}")
+            label="Website(new!)",
+            url=f"https://milkcoffee.cf")
         )
         view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
         await channel.send(embed=embed, view=view)
@@ -676,16 +671,16 @@ class Music(commands.Cog):
     async def invite(self, interaction: discord.Interaction):
         await self.log(interaction, "invite")
         embed = discord.Embed(title="MilkCoffee", color=discord.Color.blue())
-        embed.description = "音楽以外の諸機能は仕様変更の影響によりMilkCafeに移行されました。\n" \
-                            "Due to the impact of Discord's breaking changes, feature like costume has been moved to MilkCafe"
+        embed.description = "装飾シミュレータは新たに作り直されたため以下のウェブサイトで利用できます！\n" \
+                            "Outfit simulator has been redesigned and now available as website!"
         view = discord.ui.View()
         view.add_item(discord.ui.Button(
-            label="MilkCoffee",
+            label="BOTを招待",
             url=f"https://discord.com/api/oauth2/authorize?client_id=742952261176655882&permissions=8&scope=bot%20applications.commands")
         )
         view.add_item(discord.ui.Button(
-            label="MilkCafe",
-            url=f"https://discord.com/oauth2/authorize?client_id=887274006993047562&scope=bot+applications.commands&permissions=8")
+            label="Website(new!)",
+            url=f"https://milkcoffee.cf")
         )
         view.add_item(discord.ui.Button(label="公式Server", url="https://discord.gg/S3kujur2pA"))
         await interaction.response.send_message(embed=embed, view=view)
