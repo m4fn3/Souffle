@@ -1,8 +1,9 @@
 import discord
 from emoji import Emoji
 
-
 emoji = Emoji()
+
+
 def error(text: str, title: str = None):
     embed = discord.Embed(
         description=f"{emoji.xx} {text}",
