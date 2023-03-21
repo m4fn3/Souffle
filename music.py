@@ -186,10 +186,9 @@ class Player:
         # except:  # エラーを報告
         #     await self.bot.get_channel(964431944484016148).send(f"```py\n{traceback2.format_exc()}\n```")
 
-
-def destroy(self, guild: discord.Guild):
-    """パネル破棄"""
-    return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
+    def destroy(self, guild: discord.Guild):
+        """パネル破棄"""
+        return self.bot.loop.create_task(guild.voice_client.disconnect(force=False))
 
 
 class Request(discord.ui.Modal, title="楽曲追加"):
@@ -224,7 +223,7 @@ class RemoveSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         """選択完了後"""
-        await self.interaction.delete_original_message()  # 選択画面を削除(元のinteraction)
+        await self.interaction.delete_original_response()  # 選択画面を削除(元のinteraction)
         self.view.stop()
         cog = interaction.client.get_cog("Music")
         player = cog.get_player(interaction)
@@ -244,7 +243,7 @@ class RemoveView(discord.ui.View):
         self.add_item(RemoveSelect(interaction, songs))
 
     async def on_timeout(self):
-        await self.interaction.delete_original_message()
+        await self.interaction.delete_original_response()
 
 
 class MenuView(discord.ui.View):
@@ -756,7 +755,7 @@ class Music(commands.Cog):
             for search in query:
                 count += await self.process(interaction, search, True, server)
             res_msg = await interaction.channel.send(embed=response.success(f"合計{count}曲を追加しました"))
-        wait_msg = await interaction.original_message()
+        wait_msg = await interaction.original_response()
         await wait_msg.delete()
         return res_msg
 
